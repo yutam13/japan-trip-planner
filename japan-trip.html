@@ -75,6 +75,8 @@ a { color: inherit; text-decoration: none; }
 .theme-kyoto  { --c-bg: #d22a2a; --c-bg-2: #f87171; --c-soft: #fff1f1; --c-accent: #d22a2a; }
 .theme-fuji   { --c-bg: #ea580c; --c-bg-2: #fdba74; --c-soft: #fff5ec; --c-accent: #ea580c; }
 .theme-flight { --c-bg: #334155; --c-bg-2: #64748b; --c-soft: #eef1f5; --c-accent: #334155; }
+/* Locations get a distinct teal/cyan theme so they read as a different mode */
+.theme-loc    { --c-bg: #0d9488; --c-bg-2: #5eead4; --c-soft: #effaf6; --c-accent: #0d9488; }
 
 /* =========================================================================
    App shell
@@ -114,6 +116,42 @@ a { color: inherit; text-decoration: none; }
 }
 .btn-reset:hover { background: #f8fafc; box-shadow: var(--shadow-sm); }
 .btn-reset:active { transform: scale(.97); }
+
+/* =========================================================================
+   Mode toggle (Days / Locations) — segmented control under the top bar
+   ========================================================================= */
+.mode-toggle-wrap {
+  position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 22;
+  display: flex; justify-content: center;
+  padding: 12px 16px 4px;
+  background: var(--bg);
+}
+.mode-toggle {
+  display: inline-flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+  gap: 2px;
+}
+.mode-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  font-size: 13.5px; font-weight: 700; color: var(--text-muted);
+  letter-spacing: .005em;
+  transition: background .18s ease, color .18s ease, transform .1s ease;
+}
+.mode-btn:active { transform: scale(.97); }
+.mode-btn.is-active { color: white; }
+.mode-btn.is-active.mode-days     { background: linear-gradient(135deg, #ef4444, #f97316); box-shadow: 0 6px 16px -6px rgba(239, 68, 68, .55); }
+.mode-btn.is-active.mode-locations { background: linear-gradient(135deg, #0d9488, #14b8a6); box-shadow: 0 6px 16px -6px rgba(13, 148, 136, .55); }
+
+/* When mode toggle is sticky, push the pills-wrap below it accordingly */
+.has-toggle .pills-wrap {
+  top: calc(64px + 60px + env(safe-area-inset-top));
+}
 
 /* =========================================================================
    Day pills (horizontal scroller, primary navigation)
@@ -173,6 +211,32 @@ a { color: inherit; text-decoration: none; }
 .pill.is-active .num-big { color: white; }
 .pill.is-active .pill-check { background: white; color: var(--c-bg); box-shadow: 0 2px 4px rgba(0,0,0,.15); }
 
+/* Location pills — wider, show name + emoji */
+.pill.loc-pill {
+  width: auto; min-width: 110px; max-width: 180px;
+  height: 92px;
+  padding: 12px 16px;
+  align-items: center; justify-content: center; gap: 6px;
+}
+.pill.loc-pill .loc-emoji { font-size: 26px; line-height: 1; }
+.pill.loc-pill .loc-name { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -.01em; line-height: 1.2; text-align: center; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill.loc-pill.is-active .loc-name { color: white; }
+.pill.loc-pill.add-pill {
+  background: transparent;
+  border: 1.5px dashed #c8cdda;
+  color: var(--text-muted);
+}
+.pill.loc-pill.add-pill .loc-name { color: var(--text-muted); }
+.pill.loc-pill.add-pill:hover { background: var(--bg-card); border-color: var(--c-accent, #0d9488); color: var(--c-accent, #0d9488); }
+.pill.loc-pill.add-pill:hover .loc-name { color: var(--c-accent, #0d9488); }
+
+/* Empty-locations hint inside the pills row */
+.no-locations-hint {
+  display: inline-flex; align-items: center;
+  font-size: 13px; color: var(--text-muted); padding: 0 6px;
+  font-style: italic;
+}
+
 /* =========================================================================
    Day overview card (clean white card, like the reference image)
    ========================================================================= */
@@ -215,6 +279,25 @@ a { color: inherit; text-decoration: none; }
   margin: 12px 0 6px;
   font-size: 26px; line-height: 1.15; font-weight: 800;
   letter-spacing: -.02em; color: var(--text);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.overview h2 .title-edit {
+  width: 30px; height: 30px; border-radius: 10px;
+  background: var(--border-soft); color: var(--text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+  transition: background .15s, color .15s, transform .1s;
+}
+.overview h2 .title-edit:hover { background: var(--c-soft); color: var(--c-accent); }
+.overview h2 .title-edit:active { transform: scale(.94); }
+.title-edit-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1; min-width: 0; }
+.title-edit-form .input {
+  font-size: 22px; font-weight: 800; padding: 8px 12px;
+  border-radius: 12px; border: 2px solid var(--c-bg);
+  background: white;
+}
+@media (min-width: 720px) {
+  .title-edit-form .input { font-size: 26px; }
 }
 .overview .ov-sub {
   margin: 0;
@@ -876,21 +959,32 @@ a { color: inherit; text-decoration: none; }
 
   /* =========================================================================
      Storage
+     =========================================================================
+     Backwards compatible. Older stored shapes:
+       1) Array<Day>                                              (legacy)
+       2) { days, customSections }                                (v2)
+     New shape:
+       3) { days, customSections, locations, mode, selectedLocationId }
      ========================================================================= */
+  var MODE_KEY = "japan-trip-2026:mode";
+  var SELECTED_LOCATION_KEY = "japan-trip-2026:selectedLocation";
+
   function loadStored() {
+    var fallback = { days: clone(defaultData), customSections: [], locations: [] };
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { days: clone(defaultData), customSections: [] };
+      if (!raw) return fallback;
       var parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return { days: parsed, customSections: [] };
+      if (Array.isArray(parsed) && parsed.length > 0) return { days: parsed, customSections: [], locations: [] };
       if (parsed && Array.isArray(parsed.days) && parsed.days.length > 0) {
         return {
           days: parsed.days,
-          customSections: Array.isArray(parsed.customSections) ? parsed.customSections : []
+          customSections: Array.isArray(parsed.customSections) ? parsed.customSections : [],
+          locations: Array.isArray(parsed.locations) ? parsed.locations : []
         };
       }
     } catch (e) {}
-    return { days: clone(defaultData), customSections: [] };
+    return fallback;
   }
   function clone(v) { return JSON.parse(JSON.stringify(v)); }
 
@@ -899,20 +993,32 @@ a { color: inherit; text-decoration: none; }
      ========================================================================= */
   var state = (function () {
     var s = loadStored();
+    var savedMode = localStorage.getItem(MODE_KEY);
     return {
+      mode: (savedMode === "locations" ? "locations" : "days"),
       days: s.days,
       customSections: s.customSections,
+      locations: s.locations,
       selectedDayId: localStorage.getItem(SELECTED_DAY_KEY) || s.days[0].id,
-      editing: null,         // item id currently in edit mode
-      adding: null,          // section key for add form: "attractions" | "restaurants" | section id
-      renamingSection: null  // section id being renamed
+      selectedLocationId: localStorage.getItem(SELECTED_LOCATION_KEY) || (s.locations[0] ? s.locations[0].id : null),
+      editing: null,            // item id currently in edit mode (within a section)
+      adding: null,             // section key for add form: "attractions" | "restaurants" | section id | "__new_section__" | "__new_location__"
+      renamingSection: null,    // section id being renamed
+      renamingTitle: null       // "day" | "location" — inline rename of the current title
     };
   })();
 
   function persist() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ days: state.days, customSections: state.customSections }));
-      localStorage.setItem(SELECTED_DAY_KEY, state.selectedDayId);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        days: state.days,
+        customSections: state.customSections,
+        locations: state.locations
+      }));
+      localStorage.setItem(SELECTED_DAY_KEY, state.selectedDayId || "");
+      localStorage.setItem(MODE_KEY, state.mode);
+      if (state.selectedLocationId) localStorage.setItem(SELECTED_LOCATION_KEY, state.selectedLocationId);
+      else localStorage.removeItem(SELECTED_LOCATION_KEY);
     } catch (e) {}
   }
 
@@ -924,12 +1030,28 @@ a { color: inherit; text-decoration: none; }
     var i = state.days.findIndex(function (d) { return d.id === state.selectedDayId; });
     return i >= 0 ? i : 0;
   }
+  function getSelectedLocation() {
+    if (!state.locations.length) return null;
+    var i = state.locations.findIndex(function (l) { return l.id === state.selectedLocationId; });
+    return i >= 0 ? state.locations[i] : state.locations[0];
+  }
 
   function updateSelectedDay(mutator) {
     var idx = getSelectedDayIndex();
     var copy = JSON.parse(JSON.stringify(state.days[idx]));
     mutator(copy);
     state.days[idx] = copy;
+    persist();
+    render();
+  }
+
+  function updateSelectedLocation(mutator) {
+    var loc = getSelectedLocation();
+    if (!loc) return;
+    var idx = state.locations.findIndex(function (l) { return l.id === loc.id; });
+    var copy = JSON.parse(JSON.stringify(state.locations[idx]));
+    mutator(copy);
+    state.locations[idx] = copy;
     persist();
     render();
   }
@@ -971,12 +1093,19 @@ a { color: inherit; text-decoration: none; }
     var monthLabel = day.date.replace(/(\w+) (\d+)/, "$1") .toUpperCase();   // "MAY"
     var dayNum = (day.date.match(/\d+/) || [""])[0];
     var label = monthLabel + " · " + esc((day.city || "").toUpperCase()) + " " + dayNum;
+    var titleBlock = state.renamingTitle === "day"
+      ? ('<form class="title-edit-form" data-form="rename-day-title" autocomplete="off">' +
+            '<input class="input" name="title" required value="' + esc(day.title) + '" autofocus>' +
+            '<button type="submit" class="btn-primary">Save</button>' +
+            '<button type="button" class="btn-secondary" data-action="cancel-rename-title">Cancel</button>' +
+         '</form>')
+      : ('<h2>' + esc(day.title) + '<button class="title-edit" data-action="rename-day-title" title="Rename day" aria-label="Rename day">✏️</button></h2>');
     return (
       '<section class="overview ' + theme + '">' +
         '<div class="ov-row">' +
-          '<div>' +
+          '<div style="flex:1; min-width:0;">' +
             '<div class="ov-label">' + label + '</div>' +
-            '<h2>' + esc(day.title) + '</h2>' +
+            titleBlock +
             '<p class="ov-sub">Day ' + (index + 1) + ' of ' + state.days.length + ' · ' + esc(day.weekday) + ' · ' + cityLine + '</p>' +
           '</div>' +
           '<div class="ov-cal" aria-hidden="true">📅</div>' +
@@ -985,6 +1114,296 @@ a { color: inherit; text-decoration: none; }
           '<button class="btn-done ' + doneOn + '" data-action="toggle-done">' + doneLabel + '</button>' +
         '</div>' +
       '</section>'
+    );
+  }
+
+  /* ---- LOCATIONS-MODE renderers ----
+     Locations are a parallel data structure with the same section shape as days
+     (attractions, restaurants, customItems keyed by state.customSections id).
+     Theme is fixed to .theme-loc (teal/cyan) so it visually distinguishes from days.
+  */
+  var locEmojiCandidates = ["📍","🌸","🍣","🏞️","🎎","🗾","🍵","🌊","🎏","🍡"];
+  function pickLocEmoji(name) {
+    var n = (name || "").toLowerCase();
+    if (n.indexOf("tokyo") >= 0) return "🗼";
+    if (n.indexOf("kyoto") >= 0) return "🏯";
+    if (n.indexOf("osaka") >= 0) return "🏙️";
+    if (n.indexOf("fuji") >= 0 || n.indexOf("kawaguch") >= 0 || n.indexOf("hakone") >= 0) return "🗻";
+    if (n.indexOf("nagano") >= 0 || n.indexOf("hokkaido") >= 0) return "🏔️";
+    if (n.indexOf("nara") >= 0) return "🦌";
+    if (n.indexOf("hiroshima") >= 0) return "⛩️";
+    if (n.indexOf("okinawa") >= 0) return "🏝️";
+    return "📍";
+  }
+
+  function renderLocationsPills() {
+    var parts = state.locations.map(function (loc) {
+      var icon = loc.icon || pickLocEmoji(loc.name);
+      var active = loc.id === (getSelectedLocation() && getSelectedLocation().id) ? " is-active theme-loc" : "";
+      return (
+        '<button class="pill loc-pill' + active + '" data-action="select-location" data-loc-id="' + esc(loc.id) + '" aria-label="' + esc(loc.name) + '">' +
+          '<span class="loc-emoji" aria-hidden="true">' + icon + '</span>' +
+          '<span class="loc-name">' + esc(loc.name) + '</span>' +
+        '</button>'
+      );
+    }).join("");
+    var addPill =
+      '<button class="pill loc-pill add-pill" data-action="open-new-location" aria-label="Add a new location">' +
+        '<span class="loc-emoji" aria-hidden="true">＋</span>' +
+        '<span class="loc-name">New location</span>' +
+      '</button>';
+    var emptyHint = state.locations.length === 0
+      ? '<span class="no-locations-hint">No locations yet — tap “New location”.</span>'
+      : '';
+    return '<div class="pills" id="pills">' + parts + addPill + emptyHint + '</div>';
+  }
+
+  function renderLocationOverview(loc) {
+    var icon = loc.icon || pickLocEmoji(loc.name);
+    var titleBlock = state.renamingTitle === "location"
+      ? ('<form class="title-edit-form" data-form="rename-location-title" autocomplete="off">' +
+            '<input class="input" name="title" required value="' + esc(loc.name) + '" autofocus>' +
+            '<button type="submit" class="btn-primary">Save</button>' +
+            '<button type="button" class="btn-secondary" data-action="cancel-rename-title">Cancel</button>' +
+         '</form>')
+      : ('<h2>' + esc(loc.name) + '<button class="title-edit" data-action="rename-location-title" title="Rename location" aria-label="Rename location">✏️</button></h2>');
+    var notesEditing = state.adding === ("notes:" + loc.id);
+    var notesBlock = notesEditing
+      ? ('<form class="form-block" data-form="location-notes" data-loc-id="' + esc(loc.id) + '" autocomplete="off" style="margin-top:14px;">' +
+            '<h4>Notes</h4>' +
+            '<textarea class="textarea" name="notes" rows="4" placeholder="Notes about this location…">' + esc(loc.notes || "") + '</textarea>' +
+            '<div class="form-actions">' +
+              '<button type="submit" class="btn-primary">Save</button>' +
+              '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+            '</div>' +
+         '</form>')
+      : (loc.notes
+          ? '<div class="tip-card" style="margin-top:14px;"><p>' + esc(loc.notes) + '</p>' +
+              '<div style="margin-top:10px;"><button class="chip" data-action="edit-location-notes" data-loc-id="' + esc(loc.id) + '">✏️ Edit notes</button></div>' +
+            '</div>'
+          : '<div style="margin-top:14px;"><button class="chip" data-action="edit-location-notes" data-loc-id="' + esc(loc.id) + '">+ Add notes</button></div>'
+        );
+    return (
+      '<section class="overview theme-loc">' +
+        '<div class="ov-row">' +
+          '<div style="flex:1; min-width:0;">' +
+            '<div class="ov-label">LOCATION</div>' +
+            titleBlock +
+            '<p class="ov-sub">' + esc(icon) + '   ' + state.locations.length + ' location' + (state.locations.length === 1 ? '' : 's') + ' total</p>' +
+          '</div>' +
+          '<div class="ov-cal" aria-hidden="true">📍</div>' +
+        '</div>' +
+        '<div class="ov-actions">' +
+          '<button class="btn-done" data-action="delete-location" data-loc-id="' + esc(loc.id) + '" data-loc-name="' + esc(loc.name) + '" style="background:#fee2e2; color:#991b1b; box-shadow:none;">🗑️ Delete location</button>' +
+        '</div>' +
+        notesBlock +
+      '</section>'
+    );
+  }
+
+  function renderLocationAttractions(loc) {
+    var items = loc.attractions || [];
+    var addOpen = state.adding === "loc-attractions";
+    var emptyMsg = (items.length === 0 && !addOpen)
+      ? '<p class="empty">No places yet — tap “+ Add Place”.</p>' : '';
+    return (
+      '<section class="section kind-attractions theme-loc">' +
+        '<div class="section-head">' +
+          '<h3><span class="icon">🗺️</span> Attractions <span class="count">' + items.length + '</span></h3>' +
+          '<button class="btn-add attr" data-action="add-loc-attraction">+ Add Place</button>' +
+        '</div>' +
+        (addOpen ? renderAttractionEditor({ id: newId() }, true) : '') +
+        '<div class="cards">' +
+          items.map(function (a) { return renderLocationAttractionCard(a, loc); }).join("") +
+        '</div>' +
+        emptyMsg +
+      '</section>'
+    );
+  }
+
+  function renderLocationRestaurants(loc) {
+    var items = loc.restaurants || [];
+    var addOpen = state.adding === "loc-restaurants";
+    var emptyMsg = (items.length === 0 && !addOpen)
+      ? '<p class="empty">No restaurants yet — tap “+ Add Restaurant”.</p>' : '';
+    return (
+      '<section class="section kind-restaurants">' +
+        '<div class="section-head">' +
+          '<h3><span class="icon">🍱</span> Restaurants <span class="count">' + items.length + '</span></h3>' +
+          '<button class="btn-add rest" data-action="add-loc-restaurant">+ Add Restaurant</button>' +
+        '</div>' +
+        (addOpen ? renderRestaurantEditor({ id: newId() }, true) : '') +
+        '<div class="cards">' +
+          items.map(function (r) { return renderLocationRestaurantCard(r, loc); }).join("") +
+        '</div>' +
+        emptyMsg +
+      '</section>'
+    );
+  }
+
+  function renderLocationCustomSection(section, loc) {
+    var items = (loc.customItems && loc.customItems[section.id]) || [];
+    var addOpen = state.adding === ("loc-custom:" + section.id);
+    var emptyMsg = (items.length === 0 && !addOpen)
+      ? '<p class="empty">Nothing here yet — tap “+ Add” to add to ' + esc(section.label) + '.</p>' : '';
+    return (
+      '<section class="section kind-custom">' +
+        '<div class="section-head">' +
+          '<h3><span class="icon">✨</span> ' + esc(section.label) + ' <span class="count">' + items.length + '</span></h3>' +
+          '<div class="section-tools">' +
+            '<button class="btn-add cust" data-action="add-loc-custom" data-section-id="' + esc(section.id) + '" data-section-label="' + esc(section.label) + '">+ Add</button>' +
+          '</div>' +
+        '</div>' +
+        (addOpen ? renderGenericEditor({ id: newId() }, true, section.id, section.label) : '') +
+        '<div class="cards">' +
+          items.map(function (it) { return renderLocationCustomCard(it, loc, section.id, section.label); }).join("") +
+        '</div>' +
+        emptyMsg +
+      '</section>'
+    );
+  }
+
+  function renderLocationContent(loc) {
+    return (
+      '<div class="content">' +
+        renderLocationAttractions(loc) +
+        renderLocationRestaurants(loc) +
+        state.customSections.map(function (sec) { return renderLocationCustomSection(sec, loc); }).join("") +
+        renderNewSectionForm() +
+      '</div>'
+    );
+  }
+
+  function renderNewLocationForm() {
+    return (
+      '<section class="overview theme-loc">' +
+        '<div class="ov-row">' +
+          '<div style="flex:1; min-width:0;">' +
+            '<div class="ov-label">NEW LOCATION</div>' +
+            '<form data-form="new-location" autocomplete="off" style="margin-top:8px;">' +
+              '<div class="form-grid">' +
+                '<input class="input" name="name" required placeholder="Location name (e.g. Tokyo, Kyoto, Osaka)" autofocus>' +
+                '<input class="input" name="icon" placeholder="Emoji icon (optional, e.g. 🗼)" maxlength="4">' +
+                '<textarea class="textarea" name="notes" rows="3" placeholder="Notes (optional)"></textarea>' +
+              '</div>' +
+              '<div class="form-actions">' +
+                '<button type="submit" class="btn-primary">Create location</button>' +
+                '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+              '</div>' +
+            '</form>' +
+          '</div>' +
+        '</div>' +
+      '</section>'
+    );
+  }
+
+  function renderLocationsView() {
+    if (state.adding === "__new_location__") {
+      return (
+        '<div class="pills-wrap">' + renderLocationsPills() + '</div>' +
+        '<main class="day-view">' + renderNewLocationForm() + '</main>'
+      );
+    }
+    var loc = getSelectedLocation();
+    var inner = loc
+      ? (renderLocationOverview(loc) + renderLocationContent(loc))
+      : ('<section class="overview theme-loc">' +
+            '<div class="ov-row"><div><div class="ov-label">GET STARTED</div>' +
+              '<h2>Add your first location</h2>' +
+              '<p class="ov-sub">Locations are independent of days — perfect for grouping by city.</p>' +
+            '</div><div class="ov-cal" aria-hidden="true">📍</div></div>' +
+            '<div class="ov-actions">' +
+              '<button class="btn-done" data-action="open-new-location" style="background: linear-gradient(135deg, #0d9488, #14b8a6);">+ New location</button>' +
+            '</div>' +
+         '</section>');
+    return (
+      '<div class="pills-wrap">' + renderLocationsPills() + '</div>' +
+      '<main class="day-view">' + inner + '</main>'
+    );
+  }
+
+  /* ---- Card variants for locations (use same renderers but different action names) ---- */
+  function renderLocationAttractionCard(item, loc) {
+    if (state.editing === item.id) return '<div class="card kind-attraction" style="overflow:visible">' + renderAttractionEditor(item, false) + '</div>';
+    var visitedClass = item.visited ? " is-visited" : "";
+    var icon = loc.icon || pickLocEmoji(loc.name);
+    var visitedChip = item.visited
+      ? '<button class="chip is-on" data-action="toggle-visited-loc-a" data-id="' + esc(item.id) + '">✓ Visited</button>'
+      : '<button class="chip" data-action="toggle-visited-loc-a" data-id="' + esc(item.id) + '">Mark visited</button>';
+    return (
+      '<article class="card kind-attraction theme-loc' + visitedClass + '">' +
+        cardHeroBlock(icon, "PLACE") +
+        '<div class="card-body">' +
+          '<h4 class="card-name">' + esc(item.name) + '</h4>' +
+          (item.description ? '<p class="card-desc">' + esc(item.description) + '</p>' : '') +
+          (item.hours ? '<p class="meta-line"><span class="lab">⏰ Hours</span>' + esc(item.hours) + '</p>' : '') +
+          (item.tip ? '<p class="meta-line"><span class="lab">💡 Tip</span>' + esc(item.tip) + '</p>' : '') +
+          '<div class="card-footer">' +
+            '<a class="map-btn" target="_blank" rel="noopener noreferrer" href="' + esc(getMapsHref(item, loc.name)) + '" aria-label="Open ' + esc(item.name) + ' in Google Maps"><span class="pin">📍</span> Navigate</a>' +
+            '<div class="card-actions">' +
+              visitedChip +
+              '<button class="chip" data-action="edit-loc-a" data-id="' + esc(item.id) + '">✏️</button>' +
+              '<button class="chip danger" data-action="delete-loc-a" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '">🗑️</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  function renderLocationRestaurantCard(item, loc) {
+    if (state.editing === item.id) return '<div class="card kind-restaurant" style="overflow:visible">' + renderRestaurantEditor(item, false) + '</div>';
+    var visitedClass = item.visited ? " is-visited" : "";
+    var visitedChip = item.visited
+      ? '<button class="chip is-on" data-action="toggle-visited-loc-r" data-id="' + esc(item.id) + '">✓ Visited</button>'
+      : '<button class="chip" data-action="toggle-visited-loc-r" data-id="' + esc(item.id) + '">Mark visited</button>';
+    var tags = '';
+    if (item.cuisine) tags += '<span class="tag tag-cuisine">🍴 ' + esc(item.cuisine) + '</span>';
+    if (item.price) tags += '<span class="tag tag-price">💴 ' + esc(item.price) + '</span>';
+    return (
+      '<article class="card kind-restaurant theme-loc' + visitedClass + '">' +
+        cardHeroBlock("🍱", "FOOD") +
+        '<div class="card-body">' +
+          '<h4 class="card-name">' + esc(item.name) + '</h4>' +
+          (tags ? '<div class="tag-row">' + tags + '</div>' : '') +
+          (item.note ? '<p class="meta-line">📝 ' + esc(item.note) + '</p>' : '') +
+          '<div class="card-footer">' +
+            '<a class="map-btn" target="_blank" rel="noopener noreferrer" href="' + esc(getMapsHref(item, loc.name)) + '" aria-label="Open ' + esc(item.name) + ' in Google Maps"><span class="pin">📍</span> Navigate</a>' +
+            '<div class="card-actions">' +
+              visitedChip +
+              '<button class="chip" data-action="edit-loc-r" data-id="' + esc(item.id) + '">✏️</button>' +
+              '<button class="chip danger" data-action="delete-loc-r" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '">🗑️</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  function renderLocationCustomCard(item, loc, sectionId, sectionLabel) {
+    if (state.editing === item.id) return '<div class="card kind-custom" style="overflow:visible">' + renderGenericEditor(item, false, sectionId, sectionLabel) + '</div>';
+    var visitedClass = item.visited ? " is-visited" : "";
+    var visitedChip = item.visited
+      ? '<button class="chip is-on" data-action="toggle-visited-loc-c" data-id="' + esc(item.id) + '" data-section-id="' + esc(sectionId) + '">✓ Visited</button>'
+      : '<button class="chip" data-action="toggle-visited-loc-c" data-id="' + esc(item.id) + '" data-section-id="' + esc(sectionId) + '">Mark visited</button>';
+    var badge = sectionLabel ? sectionLabel.toUpperCase().slice(0, 12) : "ITEM";
+    return (
+      '<article class="card kind-custom theme-loc' + visitedClass + '">' +
+        cardHeroBlock("✨", esc(badge)) +
+        '<div class="card-body">' +
+          '<h4 class="card-name">' + esc(item.name) + '</h4>' +
+          (item.description ? '<p class="card-desc">' + esc(item.description) + '</p>' : '') +
+          (item.note ? '<p class="meta-line">📝 ' + esc(item.note) + '</p>' : '') +
+          '<div class="card-footer">' +
+            '<a class="map-btn" target="_blank" rel="noopener noreferrer" href="' + esc(getMapsHref(item, loc.name)) + '" aria-label="Open ' + esc(item.name) + ' in Google Maps"><span class="pin">📍</span> Navigate</a>' +
+            '<div class="card-actions">' +
+              visitedChip +
+              '<button class="chip" data-action="edit-loc-c" data-id="' + esc(item.id) + '" data-section-id="' + esc(sectionId) + '">✏️</button>' +
+              '<button class="chip danger" data-action="delete-loc-c" data-id="' + esc(item.id) + '" data-section-id="' + esc(sectionId) + '" data-name="' + esc(item.name) + '">🗑️</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</article>'
     );
   }
 
@@ -1257,11 +1676,35 @@ a { color: inherit; text-decoration: none; }
     );
   }
 
-  function render() {
+  function renderModeToggle() {
+    var dActive = state.mode === "days" ? " is-active mode-days" : "";
+    var lActive = state.mode === "locations" ? " is-active mode-locations" : "";
+    return (
+      '<div class="mode-toggle-wrap">' +
+        '<div class="mode-toggle" role="tablist" aria-label="View mode">' +
+          '<button class="mode-btn' + dActive + '" data-action="set-mode" data-mode="days" role="tab" aria-selected="' + (state.mode === "days") + '">📅 Days</button>' +
+          '<button class="mode-btn' + lActive + '" data-action="set-mode" data-mode="locations" role="tab" aria-selected="' + (state.mode === "locations") + '">📍 Locations</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderDaysView() {
     var day = getSelectedDay();
     var index = getSelectedDayIndex();
+    return (
+      '<div class="pills-wrap">' + renderPills() + '</div>' +
+      '<main class="day-view">' +
+        renderHero(day, index) +
+        renderDayContent(day) +
+      '</main>'
+    );
+  }
+
+  function render() {
+    var body = state.mode === "locations" ? renderLocationsView() : renderDaysView();
     var html =
-      '<div class="app">' +
+      '<div class="app has-toggle">' +
         '<header class="topbar">' +
           '<div class="brand">' +
             '<div class="brand-mark" aria-hidden="true">🗾</div>' +
@@ -1272,11 +1715,8 @@ a { color: inherit; text-decoration: none; }
           '</div>' +
           '<button class="btn-reset" data-action="reset">Reset</button>' +
         '</header>' +
-        '<div class="pills-wrap">' + renderPills() + '</div>' +
-        '<main class="day-view">' +
-          renderHero(day, index) +
-          renderDayContent(day) +
-        '</main>' +
+        renderModeToggle() +
+        body +
       '</div>';
     document.getElementById("root").innerHTML = html;
 
@@ -1305,11 +1745,14 @@ a { color: inherit; text-decoration: none; }
     }
 
     if (action === "reset") {
-      if (confirm("Reset all edits and reload the original itinerary? This will erase any places you added or changed, and remove any custom sections.")) {
+      if (confirm("Reset everything? This erases all edits, custom sections, and locations, and reloads the original itinerary.")) {
         state.days = JSON.parse(JSON.stringify(defaultData));
         state.customSections = [];
+        state.locations = [];
+        state.mode = "days";
         state.selectedDayId = state.days[0].id;
-        state.adding = null; state.editing = null; state.renamingSection = null;
+        state.selectedLocationId = null;
+        state.adding = null; state.editing = null; state.renamingSection = null; state.renamingTitle = null;
         persist(); render();
       }
       return;
@@ -1394,8 +1837,103 @@ a { color: inherit; text-decoration: none; }
       return;
     }
 
+    /* Mode toggle */
+    if (action === "set-mode") {
+      var nextMode = t.dataset.mode === "locations" ? "locations" : "days";
+      if (state.mode !== nextMode) {
+        state.mode = nextMode;
+        state.adding = null; state.editing = null; state.renamingSection = null; state.renamingTitle = null;
+        persist(); render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      return;
+    }
+
+    /* Inline title rename — Day */
+    if (action === "rename-day-title") { state.renamingTitle = "day"; state.adding = null; state.editing = null; render(); return; }
+    if (action === "rename-location-title") { state.renamingTitle = "location"; state.adding = null; state.editing = null; render(); return; }
+    if (action === "cancel-rename-title") { state.renamingTitle = null; render(); return; }
+
+    /* Locations — selection / creation / deletion */
+    if (action === "open-new-location") { state.adding = "__new_location__"; state.editing = null; state.renamingTitle = null; render(); return; }
+    if (action === "select-location") {
+      state.selectedLocationId = t.dataset.locId;
+      state.adding = null; state.editing = null; state.renamingTitle = null;
+      persist(); render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (action === "delete-location") {
+      var locId = t.dataset.locId;
+      if (confirm('Delete location "' + t.dataset.locName + '"? All places, restaurants and items inside it will be lost.')) {
+        state.locations = state.locations.filter(function (l) { return l.id !== locId; });
+        if (state.selectedLocationId === locId) {
+          state.selectedLocationId = state.locations.length ? state.locations[0].id : null;
+        }
+        state.adding = null; state.editing = null; state.renamingTitle = null;
+        persist(); render();
+      }
+      return;
+    }
+    if (action === "edit-location-notes") { state.adding = "notes:" + t.dataset.locId; state.editing = null; state.renamingTitle = null; render(); return; }
+
+    /* Locations — attractions */
+    if (action === "add-loc-attraction") { state.adding = "loc-attractions"; state.editing = null; render(); return; }
+    if (action === "edit-loc-a") { state.editing = t.dataset.id; state.adding = null; render(); return; }
+    if (action === "toggle-visited-loc-a") {
+      var laId = t.dataset.id;
+      updateSelectedLocation(function (l) { l.attractions = (l.attractions || []).map(function (a) { return a.id === laId ? Object.assign({}, a, { visited: !a.visited }) : a; }); });
+      return;
+    }
+    if (action === "delete-loc-a") {
+      var laId2 = t.dataset.id;
+      if (confirm('Delete "' + t.dataset.name + '"?')) {
+        updateSelectedLocation(function (l) { l.attractions = (l.attractions || []).filter(function (a) { return a.id !== laId2; }); });
+      }
+      return;
+    }
+
+    /* Locations — restaurants */
+    if (action === "add-loc-restaurant") { state.adding = "loc-restaurants"; state.editing = null; render(); return; }
+    if (action === "edit-loc-r") { state.editing = t.dataset.id; state.adding = null; render(); return; }
+    if (action === "toggle-visited-loc-r") {
+      var lrId = t.dataset.id;
+      updateSelectedLocation(function (l) { l.restaurants = (l.restaurants || []).map(function (x) { return x.id === lrId ? Object.assign({}, x, { visited: !x.visited }) : x; }); });
+      return;
+    }
+    if (action === "delete-loc-r") {
+      var lrId2 = t.dataset.id;
+      if (confirm('Delete "' + t.dataset.name + '"?')) {
+        updateSelectedLocation(function (l) { l.restaurants = (l.restaurants || []).filter(function (x) { return x.id !== lrId2; }); });
+      }
+      return;
+    }
+
+    /* Locations — custom sections */
+    if (action === "add-loc-custom") { state.adding = "loc-custom:" + t.dataset.sectionId; state.editing = null; render(); return; }
+    if (action === "edit-loc-c") { state.editing = t.dataset.id; state.adding = null; render(); return; }
+    if (action === "toggle-visited-loc-c") {
+      var lcId = t.dataset.id, lcSid = t.dataset.sectionId;
+      updateSelectedLocation(function (l) {
+        l.customItems = l.customItems || {};
+        var arr = (l.customItems[lcSid] || []).map(function (x) { return x.id === lcId ? Object.assign({}, x, { visited: !x.visited }) : x; });
+        l.customItems[lcSid] = arr;
+      });
+      return;
+    }
+    if (action === "delete-loc-c") {
+      var lcId2 = t.dataset.id, lcSid2 = t.dataset.sectionId;
+      if (confirm('Delete "' + t.dataset.name + '"?')) {
+        updateSelectedLocation(function (l) {
+          if (!l.customItems || !l.customItems[lcSid2]) return;
+          l.customItems[lcSid2] = l.customItems[lcSid2].filter(function (x) { return x.id !== lcId2; });
+        });
+      }
+      return;
+    }
+
     if (action === "cancel-form") {
-      state.adding = null; state.editing = null; render();
+      state.adding = null; state.editing = null; state.renamingTitle = null; render();
       return;
     }
   });
@@ -1409,14 +1947,30 @@ a { color: inherit; text-decoration: none; }
     var inputs = form.querySelectorAll("input, textarea");
     for (var i = 0; i < inputs.length; i++) data[inputs[i].name] = inputs[i].value.trim();
 
+    /* In days mode, attraction/restaurant/custom forms target the selected DAY.
+       In locations mode, the same forms target the selected LOCATION based on state.adding. */
+    var inLocationMode = state.mode === "locations";
+    var addingTarget = state.adding;        // "attractions", "restaurants", "loc-attractions", "loc-restaurants", "loc-custom:<id>", or section id, etc.
+    var editingItemId = state.editing;
+
     if (kind === "attraction") {
       if (!data.name) return;
       var isNew = form.dataset.new === "1";
       var id = form.dataset.id;
-      updateSelectedDay(function (d) {
-        if (isNew) d.attractions.push({ id: id, name: data.name, description: data.description, hours: data.hours, tip: data.tip, mapsUrl: data.mapsUrl, visited: false });
-        else d.attractions = d.attractions.map(function (a) { return a.id === id ? Object.assign({}, a, { name: data.name, description: data.description, hours: data.hours, tip: data.tip, mapsUrl: data.mapsUrl }) : a; });
-      });
+      var newItem = { id: id, name: data.name, description: data.description, hours: data.hours, tip: data.tip, mapsUrl: data.mapsUrl, visited: false };
+      var changes = { name: data.name, description: data.description, hours: data.hours, tip: data.tip, mapsUrl: data.mapsUrl };
+      if (inLocationMode) {
+        updateSelectedLocation(function (l) {
+          l.attractions = l.attractions || [];
+          if (isNew) l.attractions.push(newItem);
+          else l.attractions = l.attractions.map(function (a) { return a.id === id ? Object.assign({}, a, changes) : a; });
+        });
+      } else {
+        updateSelectedDay(function (d) {
+          if (isNew) d.attractions.push(newItem);
+          else d.attractions = d.attractions.map(function (a) { return a.id === id ? Object.assign({}, a, changes) : a; });
+        });
+      }
       state.adding = null; state.editing = null; render();
       return;
     }
@@ -1424,10 +1978,20 @@ a { color: inherit; text-decoration: none; }
       if (!data.name) return;
       var isNew2 = form.dataset.new === "1";
       var id2 = form.dataset.id;
-      updateSelectedDay(function (d) {
-        if (isNew2) d.restaurants.push({ id: id2, name: data.name, cuisine: data.cuisine, price: data.price, note: data.note, mapsUrl: data.mapsUrl, visited: false });
-        else d.restaurants = d.restaurants.map(function (x) { return x.id === id2 ? Object.assign({}, x, { name: data.name, cuisine: data.cuisine, price: data.price, note: data.note, mapsUrl: data.mapsUrl }) : x; });
-      });
+      var newR = { id: id2, name: data.name, cuisine: data.cuisine, price: data.price, note: data.note, mapsUrl: data.mapsUrl, visited: false };
+      var rChanges = { name: data.name, cuisine: data.cuisine, price: data.price, note: data.note, mapsUrl: data.mapsUrl };
+      if (inLocationMode) {
+        updateSelectedLocation(function (l) {
+          l.restaurants = l.restaurants || [];
+          if (isNew2) l.restaurants.push(newR);
+          else l.restaurants = l.restaurants.map(function (x) { return x.id === id2 ? Object.assign({}, x, rChanges) : x; });
+        });
+      } else {
+        updateSelectedDay(function (d) {
+          if (isNew2) d.restaurants.push(newR);
+          else d.restaurants = d.restaurants.map(function (x) { return x.id === id2 ? Object.assign({}, x, rChanges) : x; });
+        });
+      }
       state.adding = null; state.editing = null; render();
       return;
     }
@@ -1436,13 +2000,25 @@ a { color: inherit; text-decoration: none; }
       var isNew3 = form.dataset.new === "1";
       var id3 = form.dataset.id;
       var sid = form.dataset.sectionId;
-      updateSelectedDay(function (d) {
-        d.customItems = d.customItems || {};
-        var arr = d.customItems[sid] || [];
-        if (isNew3) arr = arr.concat([{ id: id3, name: data.name, description: data.description, note: data.note, mapsUrl: data.mapsUrl, visited: false }]);
-        else arr = arr.map(function (x) { return x.id === id3 ? Object.assign({}, x, { name: data.name, description: data.description, note: data.note, mapsUrl: data.mapsUrl }) : x; });
-        d.customItems[sid] = arr;
-      });
+      var newC = { id: id3, name: data.name, description: data.description, note: data.note, mapsUrl: data.mapsUrl, visited: false };
+      var cChanges = { name: data.name, description: data.description, note: data.note, mapsUrl: data.mapsUrl };
+      if (inLocationMode) {
+        updateSelectedLocation(function (l) {
+          l.customItems = l.customItems || {};
+          var arr = l.customItems[sid] || [];
+          if (isNew3) arr = arr.concat([newC]);
+          else arr = arr.map(function (x) { return x.id === id3 ? Object.assign({}, x, cChanges) : x; });
+          l.customItems[sid] = arr;
+        });
+      } else {
+        updateSelectedDay(function (d) {
+          d.customItems = d.customItems || {};
+          var arr = d.customItems[sid] || [];
+          if (isNew3) arr = arr.concat([newC]);
+          else arr = arr.map(function (x) { return x.id === id3 ? Object.assign({}, x, cChanges) : x; });
+          d.customItems[sid] = arr;
+        });
+      }
       state.adding = null; state.editing = null; render();
       return;
     }
@@ -1457,6 +2033,48 @@ a { color: inherit; text-decoration: none; }
       var rsid = form.dataset.sectionId;
       state.customSections = state.customSections.map(function (s) { return s.id === rsid ? Object.assign({}, s, { label: data.label }) : s; });
       state.renamingSection = null; persist(); render();
+      return;
+    }
+
+    /* Day title rename */
+    if (kind === "rename-day-title") {
+      if (!data.title) return;
+      updateSelectedDay(function (d) { d.title = data.title; });
+      state.renamingTitle = null;
+      // updateSelectedDay already called render()
+      return;
+    }
+    /* Location title rename */
+    if (kind === "rename-location-title") {
+      if (!data.title) return;
+      updateSelectedLocation(function (l) { l.name = data.title; });
+      state.renamingTitle = null;
+      return;
+    }
+    /* Location notes */
+    if (kind === "location-notes") {
+      var lnId = form.dataset.locId;
+      var idx = state.locations.findIndex(function (l) { return l.id === lnId; });
+      if (idx < 0) return;
+      state.locations[idx] = Object.assign({}, state.locations[idx], { notes: data.notes });
+      state.adding = null; persist(); render();
+      return;
+    }
+    /* New location */
+    if (kind === "new-location") {
+      if (!data.name) return;
+      var newLoc = {
+        id: newId(),
+        name: data.name,
+        icon: data.icon || "",
+        notes: data.notes || "",
+        attractions: [],
+        restaurants: [],
+        customItems: {}
+      };
+      state.locations = state.locations.concat([newLoc]);
+      state.selectedLocationId = newLoc.id;
+      state.adding = null; persist(); render();
       return;
     }
   });
