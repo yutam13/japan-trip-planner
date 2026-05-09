@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0b1020" />
+<title>Japan 2026 — Trip Planner</title>
+<style>
+/* =========================================================================
+   Reset & base
+   ========================================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+               "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+button { font: inherit; cursor: pointer; color: inherit; background: none; border: 0; padding: 0; }
+input, textarea, select { font: inherit; color: inherit; }
+input, textarea { font-size: 16px; }                 /* avoid iOS zoom on focus */
+a { color: inherit; text-decoration: none; }
+::selection { background: rgba(37, 99, 235, 0.18); }
+
+/* =========================================================================
+   Design tokens
+   ========================================================================= */
+:root {
+  --bg: #f6f7fb;
+  --bg-card: #ffffff;
+  --text: #0b1220;
+  --text-muted: #5b6477;
+  --text-soft: #8a93a6;
+  --border: #e7e9ef;
+  --border-soft: #f1f3f7;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
+  --shadow-md: 0 6px 18px -4px rgba(15, 23, 42, .12), 0 2px 4px rgba(15, 23, 42, .04);
+  --shadow-lg: 0 18px 40px -10px rgba(15, 23, 42, .22), 0 4px 10px rgba(15, 23, 42, .06);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+
+  --pad-page: 16px;
+  --pad-card: 18px;
+
+  --orange: #f97316;
+  --orange-2: #fb923c;
+  --violet: #7c5cff;
+  --violet-2: #a78bfa;
+  --rose: #ef4444;
+  --green: #10b981;
+
+  /* Per-day theme — overridden by .theme-* */
+  --c-bg: #475569;
+  --c-bg-2: #94a3b8;
+  --c-soft: #f1f5f9;
+  --c-accent: #475569;
+  --c-on: #ffffff;
+}
+.theme-tokyo  { --c-bg: #2563eb; --c-bg-2: #7aa2ff; --c-soft: #eff4ff; --c-accent: #2563eb; }
+.theme-nagano { --c-bg: #059669; --c-bg-2: #34d399; --c-soft: #ecfdf5; --c-accent: #059669; }
+.theme-kyoto  { --c-bg: #d22a2a; --c-bg-2: #f87171; --c-soft: #fff1f1; --c-accent: #d22a2a; }
+.theme-fuji   { --c-bg: #ea580c; --c-bg-2: #fdba74; --c-soft: #fff5ec; --c-accent: #ea580c; }
+.theme-flight { --c-bg: #334155; --c-bg-2: #64748b; --c-soft: #eef1f5; --c-accent: #334155; }
+
+/* =========================================================================
+   App shell
+   ========================================================================= */
+#root { min-height: 100vh; min-height: 100dvh; }
+.app { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* Top bar (sticky, glassy) */
+.topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px;
+  padding-top: calc(12px + env(safe-area-inset-top));
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  border-bottom: 1px solid var(--border-soft);
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-mark {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ff7a8a 0%, #ef4444 65%, #b91c1c 100%);
+  display: grid; place-items: center; color: white; font-size: 18px;
+  box-shadow: 0 6px 16px -4px rgba(239, 68, 68, .55);
+  flex: 0 0 auto;
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.brand-title { font-weight: 800; font-size: 17px; color: var(--text); letter-spacing: -.015em; }
+.brand-sub { font-size: 12px; color: var(--text-soft); font-weight: 500; }
+
+.btn-reset {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  padding: 9px 14px; border-radius: var(--r-pill);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: background .15s ease, transform .1s ease, box-shadow .15s ease;
+}
+.btn-reset:hover { background: #f8fafc; box-shadow: var(--shadow-sm); }
+.btn-reset:active { transform: scale(.97); }
+
+/* =========================================================================
+   Day pills (horizontal scroller, primary navigation)
+   ========================================================================= */
+.pills-wrap {
+  position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 20;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-soft);
+}
+.pills {
+  display: flex; gap: 12px;
+  padding: 16px 16px 18px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.pills::-webkit-scrollbar { display: none; }
+.pill {
+  flex: 0 0 auto;
+  width: 76px;
+  height: 92px;
+  scroll-snap-align: center;
+  background: var(--bg-card);
+  border: 1.5px solid #e6e8ef;
+  border-radius: 18px;
+  padding: 14px 8px 12px;
+  text-align: center;
+  position: relative;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: 4px;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease, color .18s ease;
+  -webkit-user-select: none; user-select: none;
+}
+.pill:hover { box-shadow: var(--shadow-sm); border-color: #d6dae3; }
+.pill:active { transform: scale(.97); }
+.pill .num-label { font-size: 11px; letter-spacing: .04em; font-weight: 600; color: var(--text-muted); text-transform: lowercase; }
+.pill .num-big { font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -.025em; color: var(--text); }
+.pill .pill-meta { font-size: 10px; color: var(--text-soft); font-weight: 600; opacity: 0; height: 0; }
+.pill .pill-check {
+  position: absolute; top: 8px; right: 8px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--green); color: white;
+  font-size: 11px; font-weight: 800;
+  display: none; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, .4);
+}
+.pill.is-done .pill-check { display: flex; }
+
+.pill.is-active {
+  background: var(--c-bg);
+  border-color: transparent;
+  box-shadow: 0 14px 28px -10px rgba(0, 0, 0, .25), 0 6px 12px rgba(0, 0, 0, .08);
+  transform: translateY(-1px) scale(1.02);
+}
+.pill.is-active .num-label { color: rgba(255, 255, 255, .85); }
+.pill.is-active .num-big { color: white; }
+.pill.is-active .pill-check { background: white; color: var(--c-bg); box-shadow: 0 2px 4px rgba(0,0,0,.15); }
+
+/* =========================================================================
+   Day overview card (clean white card, like the reference image)
+   ========================================================================= */
+.day-view { flex: 1; min-width: 0; }
+
+.overview {
+  margin: 18px 16px 0;
+  background: var(--bg-card);
+  border-radius: 22px;
+  padding: 22px 22px 20px;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+  animation: cardIn .35s ease both;
+}
+.overview::before {
+  /* faint city-themed glow in the corner for richness */
+  content: "";
+  position: absolute; right: -60px; top: -60px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: radial-gradient(circle, var(--c-bg) 0%, transparent 65%);
+  opacity: .08;
+  pointer-events: none;
+}
+.overview .ov-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.overview .ov-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 800; letter-spacing: .12em;
+  color: var(--c-bg); text-transform: uppercase;
+}
+.overview .ov-cal {
+  width: 36px; height: 36px; border-radius: 12px;
+  background: var(--c-soft); color: var(--c-bg);
+  display: grid; place-items: center; font-size: 16px;
+  flex-shrink: 0;
+}
+.overview h2 {
+  margin: 12px 0 6px;
+  font-size: 26px; line-height: 1.15; font-weight: 800;
+  letter-spacing: -.02em; color: var(--text);
+}
+.overview .ov-sub {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.overview .ov-actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-done {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 11px 18px; border-radius: var(--r-pill);
+  background: var(--text); color: white;
+  font-size: 13px; font-weight: 700;
+  box-shadow: 0 8px 18px -8px rgba(11, 18, 32, .55);
+  transition: background .15s, transform .1s, filter .15s;
+}
+.btn-done:hover { filter: brightness(1.1); }
+.btn-done:active { transform: scale(.97); }
+.btn-done.is-done {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  box-shadow: 0 8px 18px -8px rgba(16, 185, 129, .55);
+}
+
+@media (min-width: 720px) {
+  .overview { margin: 24px 32px 0; padding: 28px 32px 26px; }
+  .overview h2 { font-size: 32px; }
+}
+
+/* Day content area */
+.content {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 22px 16px calc(48px + env(safe-area-inset-bottom));
+}
+@media (min-width: 720px) {
+  .content { padding: 28px 32px calc(56px + env(safe-area-inset-bottom)); }
+}
+
+/* Notes block (info-only days + weekly notes) */
+.notes-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.notes-card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+.notes-card p { margin: 0; font-size: 14.5px; color: #2b3344; white-space: pre-line; }
+.tip-card {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.tip-card p { margin: 0; font-size: 14px; color: #6b4f00; white-space: pre-line; }
+
+/* Section block */
+.section { margin-top: 30px; }
+.section:first-of-type { margin-top: 8px; }
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  padding: 0 4px;
+}
+.section-head h3 {
+  margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.015em;
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text);
+}
+.section-head h3 .count {
+  font-size: 12px; font-weight: 800;
+  padding: 4px 10px; border-radius: var(--r-pill);
+  background: var(--border-soft); color: var(--text-muted);
+  letter-spacing: .02em;
+}
+.section.kind-attractions .section-head h3 .icon { color: var(--c-accent); }
+.section.kind-restaurants .section-head h3 .icon { color: var(--orange); }
+.section.kind-custom      .section-head h3 .icon { color: var(--violet); }
+
+.btn-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 700;
+  color: white;
+  transition: transform .1s, box-shadow .15s, filter .15s;
+  box-shadow: 0 6px 14px -6px rgba(0,0,0,.25);
+}
+.btn-add:hover { filter: brightness(1.05); }
+.btn-add:active { transform: scale(.97); }
+.btn-add.attr { background: linear-gradient(135deg, var(--c-bg), var(--c-bg-2)); }
+.btn-add.rest { background: linear-gradient(135deg, #f97316, #fb923c); }
+.btn-add.cust { background: linear-gradient(135deg, var(--violet), var(--violet-2)); }
+
+.section-tools { display: flex; gap: 6px; }
+.btn-icon {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--border-soft); color: var(--text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: background .15s, color .15s, transform .1s;
+}
+.btn-icon:hover { background: #e2e6ee; color: var(--text); }
+.btn-icon:active { transform: scale(.94); }
+.btn-icon.danger:hover { background: #ffe4e4; color: var(--rose); }
+
+/* Cards grid */
+.cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 720px) { .cards { grid-template-columns: 1fr 1fr; gap: 14px; } }
+
+/* Card */
+@keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+  display: flex; flex-direction: column;
+  animation: cardIn .35s ease both;
+}
+@media (min-width: 720px) {
+  .card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+}
+.card.is-visited { opacity: .65; }
+
+/* Hero strip on each card (gradient + city emoji + category badge) */
+.card-hero {
+  position: relative;
+  height: 96px;
+  background: linear-gradient(135deg, var(--c-bg) 0%, var(--c-bg-2) 100%);
+  display: flex; align-items: center; padding: 0 20px;
+  overflow: hidden;
+}
+.card.kind-restaurant .card-hero { background: linear-gradient(135deg, #fb923c 0%, #fdba74 100%); }
+.card.kind-custom .card-hero     { background: linear-gradient(135deg, var(--violet) 0%, var(--violet-2) 100%); }
+.card-hero::after {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255,255,255,.22), transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(0,0,0,.18), transparent 50%);
+  pointer-events: none;
+}
+.card-hero .hero-emoji {
+  position: relative; z-index: 1;
+  font-size: 44px; line-height: 1;
+  filter: drop-shadow(0 6px 8px rgba(0,0,0,.18));
+}
+.card-hero .hero-pattern {
+  position: absolute; right: -22px; bottom: -32px;
+  font-size: 130px; line-height: 1; opacity: .14;
+  pointer-events: none;
+}
+.card-badge {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 11px; border-radius: var(--r-pill);
+  background: rgba(255,255,255,.96);
+  color: var(--text);
+  font-size: 11px; font-weight: 800; letter-spacing: .12em;
+  box-shadow: 0 4px 8px -2px rgba(0,0,0,.12);
+}
+
+.card-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.card-name { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; }
+.card-desc { margin: 4px 0 0; font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: var(--r-pill);
+  font-size: 11.5px; font-weight: 700; letter-spacing: .02em;
+}
+.tag-cuisine { background: #fff1e6; color: #9a3412; }
+.tag-price   { background: #fde7f3; color: #9d174d; }
+.tag-visited { background: #d1fae5; color: #065f46; }
+
+.meta-line { font-size: 13.5px; color: #2b3344; line-height: 1.5; margin: 0; }
+.meta-line .lab { font-weight: 700; color: var(--text-muted); margin-right: 4px; }
+
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  flex-wrap: wrap; margin-top: 4px;
+}
+.card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-size: 12.5px; font-weight: 700;
+  padding: 7px 12px; border-radius: var(--r-pill);
+  background: var(--border-soft); color: var(--text-muted);
+  transition: background .15s, color .15s, transform .1s;
+}
+.chip:hover { background: #e6eaf2; color: var(--text); }
+.chip:active { transform: scale(.96); }
+.chip.is-on { background: #d1fae5; color: #065f46; }
+.chip.danger { background: #fff0f0; color: #b91c1c; }
+.chip.danger:hover { background: #ffe1e1; }
+
+/* Map / Navigate button */
+.map-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 0 18px; border-radius: var(--r-pill);
+  background: var(--text);
+  color: white; font-size: 13px; font-weight: 700;
+  letter-spacing: .01em; white-space: nowrap;
+  box-shadow: 0 8px 18px -8px rgba(11, 18, 32, .55), 0 2px 4px rgba(0,0,0,.08);
+  transition: transform .1s ease, filter .15s ease, box-shadow .15s ease;
+}
+.map-btn:hover { filter: brightness(1.18); box-shadow: 0 10px 22px -8px rgba(11, 18, 32, .6); }
+.map-btn:active { transform: scale(.96); }
+.map-btn .pin { font-size: 14px; }
+
+/* Forms */
+.form-block {
+  background: linear-gradient(180deg, #fafbff, #f5f7fc);
+  border: 1px dashed #c8cfdd;
+  border-radius: var(--r-md);
+  padding: 14px;
+  margin-bottom: 12px;
+  animation: cardIn .25s ease both;
+}
+.form-block h4 { margin: 0 0 10px; font-size: 13.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+.form-grid { display: grid; gap: 8px; }
+.input, .textarea {
+  width: 100%; display: block;
+  padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 10px; background: white;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input:focus, .textarea:focus {
+  outline: none; border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--c-accent) 18%, transparent);
+}
+.textarea { min-height: 60px; resize: vertical; line-height: 1.4; }
+.form-actions { display: flex; gap: 8px; margin-top: 10px; }
+.btn-primary {
+  padding: 10px 16px; border-radius: var(--r-pill);
+  background: linear-gradient(135deg, #0b1220, #1f2a3d);
+  color: white; font-size: 14px; font-weight: 700;
+  box-shadow: 0 8px 16px -6px rgba(0,0,0,.4);
+  transition: transform .1s, filter .15s;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-primary:active { transform: scale(.97); }
+.btn-secondary {
+  padding: 10px 16px; border-radius: var(--r-pill);
+  background: var(--border-soft); color: var(--text);
+  font-size: 14px; font-weight: 600;
+  transition: background .15s;
+}
+.btn-secondary:hover { background: #e2e6ee; }
+
+/* Rename inline form */
+.rename-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
+.rename-form .input { padding: 6px 10px; }
+
+/* Footer with "+ New section" */
+.footer-tools {
+  margin-top: 22px; padding-top: 18px;
+  border-top: 1px dashed var(--border);
+}
+.btn-newsection {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 16px; border-radius: var(--r-pill);
+  background: linear-gradient(135deg, var(--violet), var(--violet-2));
+  color: white; font-size: 13px; font-weight: 700;
+  box-shadow: 0 8px 18px -8px rgba(124, 92, 255, .55);
+  transition: transform .1s, filter .15s;
+}
+.btn-newsection:hover { filter: brightness(1.06); }
+.btn-newsection:active { transform: scale(.97); }
+.footer-help { margin: 10px 2px 0; font-size: 12px; color: var(--text-soft); }
+
+/* Empty state */
+.empty {
+  font-size: 14px; color: var(--text-soft); font-style: italic;
+  padding: 6px 4px;
+}
+
+/* Edit form inside card */
+.card .form-block { margin-bottom: 0; background: #f9fafe; border: 1px solid var(--border); border-style: solid; }
+
+/* "Add Place" button uses theme-aware color */
+.section.kind-attractions .btn-add { /* already set above */ }
+
+/* Better tap states on iOS for pills */
+@media (hover: none) {
+  .pill { transition-duration: .12s; }
+  .pill:hover { transform: none; box-shadow: none; }
+  .pill:active { transform: scale(.97); }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================================
+     Constants
+     ========================================================================= */
+  var STORAGE_KEY = "japan-trip-2026";
+  var SELECTED_DAY_KEY = "japan-trip-2026:selectedDay";
+
+  var cityIcon = { Tokyo: "🗼", Nagano: "🏔️", Kyoto: "🏯", Fuji: "🗻", Flight: "✈️" };
+  var cityClass = { Tokyo: "theme-tokyo", Nagano: "theme-nagano", Kyoto: "theme-kyoto", Fuji: "theme-fuji", Flight: "theme-flight" };
+
+  /* =========================================================================
+     Default itinerary (extracted from Plan_v5.docx daily section, May 13–31)
+     ========================================================================= */
+  var defaultData = [
+    {
+      id: "2026-05-13", date: "May 13", weekday: "Wednesday", city: "Flight",
+      title: "Flight to Japan", done: false, infoOnly: true,
+      notes: "LY91 TLV (T3) → Tokyo Narita. Depart 19:15 (May 13) · Arrive 13:20 (May 14). Overnight flight — eat early at the airport, sleep on board.\n\nPre-trip checklist:\n• Pre-load Suica/PASMO on Apple Wallet before departure (saves time at NRT).\n• Download offline Google Maps for Tokyo, Nagano, Kyoto, Kawaguchiko.\n• Confirm Imperial Palace tour, teamLab tickets, and all kaiseki reservations.",
+      attractions: [], restaurants: []
+    },
+    {
+      id: "2026-05-14", date: "May 14", weekday: "Thursday", city: "Tokyo",
+      title: "Arrive Tokyo (Ginza)", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-1401", name: "Itoya (G.Itoya)", description: "12-floor stationery & paper temple, founded 1904. Each floor a theme; hydroponic vegetable lab on 11F.", hours: "Until 20:00 weekdays", tip: "Ginza 2-7-15. Everyone leaves with at least one souvenir.", visited: false },
+        { id: "a-1402", name: "Ginza Six", description: "Tokyo's largest luxury mall (2017), Yoshio Taniguchi design, 241 brands and rotating art.", hours: "Until 20:30", tip: "Free rooftop garden — sunset views. Don't miss B6F Tsutaya Books and the depachika.", visited: false },
+        { id: "a-1403", name: "Wako Building", description: "Seiko's flagship — the iconic clock tower of Ginza since 1932.", hours: "", tip: "Ginza 4-chome crossing.", visited: false },
+        { id: "a-1404", name: "Chuo-dori", description: "Ginza's main avenue, lined with flagship stores.", hours: "", tip: "On weekends/holidays 12:00–17:00 it becomes pedestrian-only (Hokōsha Tengoku).", visited: false }
+      ],
+      restaurants: [
+        { id: "r-1401", name: "Kagari Ginza", cuisine: "Chicken paitan ramen", price: "¥", note: "8-seat counter, 5-min walk from hotel; queue moves fast.", visited: false },
+        { id: "r-1402", name: "Tokyo Ramen Street", cuisine: "Ramen — 8+ shops", price: "¥", note: "B1F Tokyo Station, Yaesu side. 1 stop on Marunouchi line.", visited: false },
+        { id: "r-1403", name: "Ginza Sato Yosuke", cuisine: "Cold Inaniwa udon", price: "¥¥", note: "Light & clean if jet-lagged.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-15", date: "May 15", weekday: "Friday", city: "Nagano",
+      title: "Tokyo → Nagano + Zenkō-ji", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-1501", name: "Zenkō-ji Temple", description: "One of Japan's most important Buddhist temples, founded 642 AD.", hours: "Main hall until 16:00, grounds open after", tip: "10 min walk from JAL City hotel, gentle uphill on Chuo-dori.", visited: false },
+        { id: "a-1502", name: "Nakamise-dori (Nagano)", description: "Temple approach lined with Edo-era shops.", hours: "", tip: "On the walk to Zenkō-ji.", visited: false },
+        { id: "a-1503", name: "Yawataya Isogoro", description: "Historic shichimi togarashi (seven-spice) shop.", hours: "", tip: "Buy a sample to take home.", visited: false },
+        { id: "a-1504", name: "JAL City onsen", description: "Hotel private bath — relax after travel.", hours: "", tip: "Soak in the evening, early night.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-1501", name: "Owariya Soba Ten", cuisine: "Soba", price: "¥¥", note: "Established 1918, hand-made soba from local stone-ground buckwheat. 5 min walk from Zenkō-ji.", visited: false },
+        { id: "r-1502", name: "Soba Daizen", cuisine: "Juwari soba", price: "¥¥", note: "100% buckwheat (juwari) soba. On the path to Zenkō-ji.", visited: false },
+        { id: "r-1503", name: "Yayoiza", cuisine: "Shojin ryori (Buddhist vegan)", price: "¥¥¥", note: "Heritage course, vegetarian option, atmospheric setting.", visited: false },
+        { id: "r-1504", name: "Caffe Terra", cuisine: "Coffee", price: "¥", note: "In a renovated old house.", visited: false },
+        { id: "r-1505", name: "Hirano Coffee", cuisine: "Coffee", price: "¥", note: "In a renovated old house.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-16", date: "May 16", weekday: "Saturday", city: "Nagano",
+      title: "Snow Monkey Park + Yokoteyama", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-1601", name: "Snow Monkey Park (Jigokudani Yaen-koen)", description: "Wild Japanese macaques bathing and grooming in their natural habitat.", hours: "Open daily; best activity 10:30–14:30", tip: "30–40 min forest trail from entrance — wear comfortable walking shoes; bring telephoto lens.", visited: false },
+        { id: "a-1602", name: "Yokoteyama Skylator", description: "200 m moving walkway to a viewing deck at ~2,000 m altitude with panoramic Japan Alps views.", hours: "", tip: "Bring layers — much colder than Nagano valley.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-1601", name: "Tsumugi (Patio Daimon)", cuisine: "Kaiseki", price: "¥¥¥", note: "Featuring juwari soba and seasonal Nagano vegetables. Reservation recommended; 20 min walk from station.", visited: false },
+        { id: "r-1602", name: "Monzen Terrace Enya", cuisine: "Modern Japanese", price: "¥¥", note: "Sea-of-Japan fish and local vegetables.", visited: false },
+        { id: "r-1603", name: "Soba/oyaki shops (Yamanouchi or Shibu Onsen)", cuisine: "Soba & oyaki", price: "¥", note: "Drive-by lunch — oyaki is Nagano's signature steamed/grilled vegetable dumpling.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-17", date: "May 17", weekday: "Sunday", city: "Nagano",
+      title: "Togakushi Shrines + SORA Terrace", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-1701", name: "Togakushi Shrine", description: "Sacred mountain shrines through ancient cedar forest. Hokosha (lower) → Chusha (middle) → Okusha (upper).", hours: "", tip: "Full Hokosha–Okusha walk is ~5.5 km / 2.5–3 hrs. Shorter version: drive to Chusha then walk the 2 km cedar avenue to Okusha.", visited: false },
+        { id: "a-1702", name: "Togakushi Ninja Museum", description: "Folk museum with the famous throwing-star trick house — fun for all ages.", hours: "", tip: "Highlight is the trick house.", visited: false },
+        { id: "a-1703", name: "SORA Terrace (Shimotakai)", description: "Ropeway up to a viewing deck at 1,770 m. Famous for the 'sea of clouds' phenomenon.", hours: "", tip: "Late afternoon for sea-of-clouds (weather-dependent). Coffee at the Terrace Cafe.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-1701", name: "Soba sho Okusha no Chaya", cuisine: "Togakushi soba", price: "¥¥", note: "Darker, stronger Togakushi-style soba. At the entrance to Okusha shrine.", visited: false },
+        { id: "r-1702", name: "Uzura-ya", cuisine: "Soba", price: "¥¥", note: "Famous, queue-worthy.", visited: false },
+        { id: "r-1703", name: "La Rencontre", cuisine: "French", price: "¥¥¥", note: "In a 130-yr-old Nagano machiya. Very special atmosphere — reservation needed.", visited: false },
+        { id: "r-1704", name: "Komatsuya", cuisine: "Italian", price: "¥¥", note: "Family-run, in a 300-yr-old house near Zenkō-ji.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-18", date: "May 18", weekday: "Monday", city: "Kyoto",
+      title: "Nagano → Kyoto, evening Gion / Pontocho", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-1801", name: "Pontocho Alley", description: "Narrow alley packed with restaurants and izakayas, gorgeous at dusk.", hours: "", tip: "6 min walk from Cross Hotel.", visited: false },
+        { id: "a-1802", name: "Gion / Hanamikoji", description: "Geisha district main street, atmospheric old machiya houses.", hours: "", tip: "Best 17:00–19:00 when lanterns light up.", visited: false },
+        { id: "a-1803", name: "Yasaka Shrine", description: "Major Shinto shrine at the eastern end of Shijo-dori.", hours: "", tip: "20 min walk from hotel; great at sunset.", visited: false },
+        { id: "a-1804", name: "Shijo-Ohashi Bridge", description: "Crossing the Kamogawa river into Gion.", hours: "", tip: "Photogenic at dusk.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-1801", name: "Pontocho Robin", cuisine: "Charcoal-grilled chicken", price: "¥¥", note: "Casual, in Pontocho.", visited: false },
+        { id: "r-1802", name: "Teppan Tavern Tenamonya", cuisine: "Teppanyaki", price: "¥¥", note: "Casual teppan dining.", visited: false },
+        { id: "r-1803", name: "Gion Yuki", cuisine: "Izakaya", price: "¥¥", note: "Cozy izakaya with sake selection, mid-range.", visited: false },
+        { id: "r-1804", name: "Tousuiro Gion", cuisine: "Tofu kaiseki", price: "¥¥¥¥", note: "In a 130-yr-old merchant house near Yasaka. Splurge — reserve in advance.", visited: false },
+        { id: "r-1805", name: "Back Alley Kyoto", cuisine: "Bar", price: "¥¥", note: "Hidden bar in a back alley.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-19", date: "May 19", weekday: "Tuesday", city: "Kyoto",
+      title: "Higashiyama (Eastern Hills)", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-1901", name: "Kiyomizu-dera", description: "Famous wooden stage, mountain views — Kyoto's most-visited temple.", hours: "Opens 06:00", tip: "Be there before 08:00 to beat tour groups.", visited: false },
+        { id: "a-1902", name: "Sannenzaka & Ninenzaka", description: "Preserved sloped lanes — classic old-Kyoto streetscape.", hours: "", tip: "Best photographed 7–8am when empty.", visited: false },
+        { id: "a-1903", name: "Kodai-ji", description: "Zen temple with a beautiful garden, founded 1606.", hours: "", tip: "Less crowded than Kiyomizu — a quiet contrast.", visited: false },
+        { id: "a-1904", name: "Yasaka Shrine", description: "Shinto shrine, free entry, gateway to Gion.", hours: "", tip: "Walk down from Maruyama Park.", visited: false },
+        { id: "a-1905", name: "Chion-in Temple", description: "Massive wooden gate, dramatic main hall.", hours: "", tip: "5 min from Yasaka.", visited: false },
+        { id: "a-1906", name: "Heian Shrine + garden", description: "Striking vermilion torii and a quiet stroll garden.", hours: "", tip: "20 min walk north of Yasaka.", visited: false },
+        { id: "a-1907", name: "Philosopher's Path", description: "Cherry-tree-lined canal walk to Ginkaku-ji (Silver Pavilion).", hours: "", tip: "Adds 1.5 hrs; very pleasant walk.", visited: false },
+        { id: "a-1908", name: "Nanzen-ji Temple", description: "Massive Zen temple with an aqueduct and sub-temples.", hours: "", tip: "Much more impressive than Heian — don't skip.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-1901", name: "Okutan Shimizu", cuisine: "Yudofu (tofu hot pot)", price: "¥¥", note: "Traditional yudofu lunch, near Kiyomizu.", visited: false },
+        { id: "r-1902", name: "Sabou Hanbee", cuisine: "Tofu", price: "¥¥", note: "320-yr-old tofu house near Kiyomizu-Gojo.", visited: false },
+        { id: "r-1903", name: "Sohonke Nishin Soba Matsuba", cuisine: "Nishin (herring) soba", price: "¥¥", note: "Historic 150-yr-old shop near Gion-Shijo.", visited: false },
+        { id: "r-1904", name: "Kyoto Tonkatsu Katsuda Shijokarasuma", cuisine: "Tonkatsu", price: "¥¥", note: "Tonkatsu lunch.", visited: false },
+        { id: "r-1905", name: "Hyotei", cuisine: "Kaiseki (Michelin)", price: "¥¥¥¥", note: "450-yr-old kaiseki ryotei in Nanzen-ji area. Splurge — book 3+ weeks ahead.", visited: false },
+        { id: "r-1906", name: "Hanasaki Manjiro", cuisine: "Kaiseki", price: "¥¥¥", note: "Kaiseki dinner near Yasaka, ¥6,000–8,000. Reserve online.", visited: false },
+        { id: "r-1907", name: "Gion Bansan", cuisine: "Seafood izakaya", price: "¥¥", note: "Fresh seafood, mid-range.", visited: false },
+        { id: "r-1908", name: "Frontier Bar Kyoto", cuisine: "Bar", price: "¥¥", note: "Cocktails after dinner.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-20", date: "May 20", weekday: "Wednesday", city: "Kyoto",
+      title: "Arashiyama (Western Edge)", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2001", name: "% Arabica Kyoto Arashiyama", description: "Specialty coffee shop with a river view.", hours: "", tip: "Skip the queue at peak hours; iconic minimalist branding.", visited: false },
+        { id: "a-2002", name: "Bamboo Grove (Sagano)", description: "Iconic bamboo forest path.", hours: "", tip: "Be there before 09:00 — gets jammed by 10:00.", visited: false },
+        { id: "a-2003", name: "Tenryū-ji", description: "UNESCO World Heritage Zen temple with a beautiful pond garden and mountain backdrop.", hours: "", tip: "Garden alone is worth it even if you skip interior.", visited: false },
+        { id: "a-2004", name: "Iwatayama Monkey Park", description: "Wild macaques and panoramic city view.", hours: "", tip: "20 min uphill hike; skip if tired.", visited: false },
+        { id: "a-2005", name: "Togetsukyo Bridge", description: "Iconic 'Moon Crossing' bridge over the Hozu river.", hours: "", tip: "Photograph from both sides.", visited: false },
+        { id: "a-2006", name: "Sagano Scenic Railway (Romantic Train)", description: "25-min open-air ride along the gorge.", hours: "", tip: "Tickets sell out — buy on arrival at Saga-Arashiyama or online in advance.", visited: false },
+        { id: "a-2007", name: "Okochi Sanso Villa", description: "Peaceful garden of a former silent-film actor; matcha + sweet included.", hours: "", tip: "A quieter alternative to the main attractions.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2001", name: "Shoraian", cuisine: "Yudofu kaiseki", price: "¥¥¥", note: "Tucked above the river — stunning views. Reservation a must.", visited: false },
+        { id: "r-2002", name: "Yudofu Sagano", cuisine: "Yudofu", price: "¥¥", note: "Traditional yudofu set in a serene garden setting.", visited: false },
+        { id: "r-2003", name: "Tousuiro Kiyamachi", cuisine: "Tofu kaiseki", price: "¥¥¥", note: "On the riverbank kawayuka terrace from May. Reserve.", visited: false },
+        { id: "r-2004", name: "Shaka Bar Kyoto", cuisine: "Bar", price: "¥¥", note: "Evening drinks.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-21", date: "May 21", weekday: "Thursday", city: "Kyoto",
+      title: "NW Temples + Nijō Castle", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2101", name: "Kinkaku-ji (Golden Pavilion)", description: "Gold-leaf-covered Zen temple reflecting in its pond.", hours: "Opens 09:00", tip: "Be there at opening to beat groups. 30–45 min visit.", visited: false },
+        { id: "a-2102", name: "Ryōan-ji", description: "World-famous Zen rock garden — 15 stones, only 14 visible from any angle.", hours: "", tip: "15 min walk from Kinkaku-ji.", visited: false },
+        { id: "a-2103", name: "Ninna-ji", description: "Founded 886. Shingon-school complex with a 5-storey pagoda and late-blooming cherries.", hours: "", tip: "10 min walk from Ryōan-ji.", visited: false },
+        { id: "a-2104", name: "Daitoku-ji Temple Complex", description: "Sprawling Zen complex with multiple sub-temples (alternative to Ninna-ji).", hours: "", tip: "More impressive overall — consider swapping in for Ninna-ji.", visited: false },
+        { id: "a-2105", name: "Nijō Castle", description: "Tokugawa shogun's Kyoto residence (1603), with 'nightingale floors' that squeak underfoot to detect intruders.", hours: "Last entry 16:00", tip: "Beautiful palace interior + gardens.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2101", name: "Toraya Karyo Kyoto Ichijo", cuisine: "Wagashi + matcha", price: "¥¥", note: "Refined Japanese sweets and matcha break.", visited: false },
+        { id: "r-2102", name: "Kyoto Wagyu Sukiyaki Panga", cuisine: "Sukiyaki / Wagyu", price: "¥¥¥", note: "Experiential sukiyaki — the recommended swap for Junidanya.", visited: false },
+        { id: "r-2103", name: "Hanasaki Manjiro", cuisine: "Kaiseki", price: "¥¥¥", note: "Reserve in advance.", visited: false },
+        { id: "r-2104", name: "Mamecha", cuisine: "Obanzai (Kyoto home-style)", price: "¥¥", note: "Hidden, in a traditional house.", visited: false },
+        { id: "r-2105", name: "Kyoto Pub", cuisine: "Bar", price: "¥¥", note: "Casual evening bar.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-22", date: "May 22", weekday: "Friday", city: "Kyoto",
+      title: "Fushimi Inari + Nishiki Market + Pontocho", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2201", name: "Fushimi Inari Taisha", description: "Thousands of vermilion torii gates winding up the mountain.", hours: "Open 24/7", tip: "Arrive before 08:00. Full loop ~5 km / 2–3 hrs; half-loop to Yotsutsuji is 1 hr with city views.", visited: false },
+        { id: "a-2202", name: "Nishiki Market", description: "'Kyoto's Kitchen' — 400 m covered arcade of food stalls and specialty shops.", hours: "Best 10:00–13:00", tip: "Don't miss takoyaki, fresh yuba, dashimaki tamago, mochi, matcha soft-serve.", visited: false },
+        { id: "a-2203", name: "Kennin-ji", description: "Kyoto's oldest Zen temple. Dramatic Wind & Thunder Gods screen.", hours: "", tip: "A peaceful pause in central Kyoto.", visited: false },
+        { id: "a-2204", name: "Shirakawa-minami-dori (Gion)", description: "Willows, stone bridges, lantern light — most atmospheric Gion stretch.", hours: "", tip: "Best after dark, especially after dinner.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2201", name: "Saryo Tsujiri (Shijo Karasuma)", cuisine: "Matcha cafe", price: "¥¥", note: "Proper matcha set — beautiful presentation.", visited: false },
+        { id: "r-2202", name: "Menya Inoichi", cuisine: "Ramen", price: "¥¥", note: "Highly rated ramen — fit it in somewhere.", visited: false },
+        { id: "r-2203", name: "Tousuiro Kiyamachi", cuisine: "Tofu kaiseki", price: "¥¥¥", note: "Riverside terrace from May — last night in Kyoto. Reserve in advance.", visited: false },
+        { id: "r-2204", name: "Bar Jam Kyoto", cuisine: "Bar", price: "¥¥", note: "Cocktails to close out Kyoto.", visited: false },
+        { id: "r-2205", name: "L'Escamoteur", cuisine: "Bar", price: "¥¥", note: "Speakeasy-style cocktail bar.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-23", date: "May 23", weekday: "Saturday", city: "Fuji",
+      title: "Kyoto → Kawaguchiko (Mt. Fuji)", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2301", name: "Oishi Park", description: "Wide park on Lake Kawaguchiko's north shore — classic Fuji-over-the-lake postcard view.", hours: "", tip: "10 min walk from Rakuyu. Lavender + flowers in season. Sunset (17:00–19:00) is the best Fuji light.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2301", name: "Hoto Fudo", cuisine: "Hoto (flat udon in miso stew)", price: "¥¥", note: "Local specialty. The architectural branch near Kawaguchiko Station is iconic.", visited: false },
+        { id: "r-2302", name: "Rakuyu in-room kaiseki", cuisine: "Ryokan kaiseki", price: "¥¥¥¥", note: "If your rate includes dinner — served in-room or in a private dining area.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-24", date: "May 24", weekday: "Sunday", city: "Fuji",
+      title: "Chureito + Oshino Hakkai + Lake Loop", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2401", name: "Chureito Pagoda", description: "5-storey pagoda with Mt. Fuji rising behind — THE iconic Fuji shot.", hours: "", tip: "Best at sunrise (before 06:30) for clearest air. ~400 stairs up.", visited: false },
+        { id: "a-2402", name: "Oshino Hakkai", description: "Village with 8 crystal-clear spring ponds fed by Fuji snowmelt; thatched-roof houses, water-wheels.", hours: "", tip: "Go early or right at lunch — it gets very crowded.", visited: false },
+        { id: "a-2403", name: "Mt. Tenjo Ropeway (Mt. Kachi Kachi)", description: "3-min ride to a viewpoint with Fuji + lake panorama.", hours: "", tip: "Cute Tanuki-and-Rabbit folktale theming.", visited: false },
+        { id: "a-2404", name: "Music Forest Museum", description: "Organ collection in a European-style garden.", hours: "", tip: "On the lake's north shore.", visited: false },
+        { id: "a-2405", name: "Itchiku Kubota Art Museum", description: "Kimono art museum — peaceful, often empty.", hours: "", tip: "A surprising find on the lake circuit.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2401", name: "Sanrokuen", cuisine: "Irori grill", price: "¥¥¥", note: "Sunken-hearth charcoal-grilled fish & meat skewers — very atmospheric.", visited: false },
+        { id: "r-2402", name: "Oshino soba shops", cuisine: "Cold soba", price: "¥¥", note: "Local tradition: cold soba with mountain-spring water.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-25", date: "May 25", weekday: "Monday", city: "Fuji",
+      title: "Hakone Day Trip OR Slow Fuji", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2501", name: "Hakone Open-Air Museum (Option A)", description: "Huge sculpture park with a Picasso pavilion — the highlight of a Hakone day trip.", hours: "", tip: "Worth the ticket alone. Buy a Hakone Free Pass at Gotemba (~¥6,100) for area transit.", visited: false },
+        { id: "a-2502", name: "Saiko Iyashi-no-Sato Nenba (Option B)", description: "Reconstructed thatched-roof village on Lake Saiko.", hours: "", tip: "Smaller and less crowded than Oshino Hakkai. Bus from Kawaguchiko Station ~30 min.", visited: false },
+        { id: "a-2503", name: "Lake Kawaguchiko bicycle rental", description: "Rental near the station — circuit the lake.", hours: "", tip: "~¥1,500/day; 15 km / ~3 hrs at relaxed pace.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2501", name: "Bistro Sun", cuisine: "Modern bistro", price: "¥¥¥", note: "Lake area — modern Western-Japanese fusion.", visited: false },
+        { id: "r-2502", name: "Yakitori near Kawaguchiko Station", cuisine: "Yakitori", price: "¥¥", note: "Quick option after Hakone return.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-26", date: "May 26", weekday: "Tuesday", city: "Tokyo",
+      title: "Kawaguchiko → Tokyo (Ginza)", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2601", name: "Hama-rikyu Garden", description: "Peaceful Edo-era lord's tea garden with a tidal pond — surprising tranquility in central Tokyo.", hours: "Closes 17:00", tip: "10 min walk from Celestine Ginza.", visited: false },
+        { id: "a-2602", name: "Ginza Corridor-gai", description: "Atmospheric old yakitori and izakaya alley under the Yamanote tracks.", hours: "", tip: "5 min from hotel, just outside Shinbashi Station.", visited: false },
+        { id: "a-2603", name: "Omoide Yokocho (Memory Lane)", description: "Tiny post-war alleys filled with 5-seat yakitori bars in Shinjuku.", hours: "", tip: "20 min on the Yamanote Line.", visited: false },
+        { id: "a-2604", name: "Golden Gai", description: "Themed micro-bar alleys in Shinjuku.", hours: "", tip: "Atmospheric and fun, but each bar has tiny capacity.", visited: false },
+        { id: "a-2605", name: "Tokyo Metropolitan Government Bldg", description: "FREE observation deck with panoramic Tokyo views and Fuji on clear days.", hours: "Until 22:00", tip: "5 min walk from Shinjuku Station.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2601", name: "Tonkatsu Maisen Aoyama Honten", cuisine: "Tonkatsu", price: "¥¥¥", note: "Tokyo classic, in a former bathhouse. 20 min by subway from Ginza.", visited: false },
+        { id: "r-2602", name: "Sushi no Midori (Shibuya)", cuisine: "Sushi", price: "¥¥", note: "Good standing/casual sushi without breaking the bank.", visited: false },
+        { id: "r-2603", name: "Numazuko (Shinjuku)", cuisine: "Sushi", price: "¥¥", note: "Casual sushi.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-27", date: "May 27", weekday: "Wednesday", city: "Tokyo",
+      title: "Asakusa + Skytree + Akihabara", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2701", name: "Senso-ji Temple", description: "Tokyo's oldest temple, in Asakusa. Famous Kaminarimon thunder gate.", hours: "", tip: "Arrive by 08:30 to photograph Kaminarimon and Nakamise-dori before the crowds.", visited: false },
+        { id: "a-2702", name: "Nakamise-dori (Asakusa)", description: "Souvenirs and traditional snacks: ningyo-yaki, agemanju, senbei.", hours: "", tip: "Walk from Kaminarimon to the temple.", visited: false },
+        { id: "a-2703", name: "Sumida Park", description: "Riverside park with Skytree views from the bridge.", hours: "", tip: "Quick stop on the walk to Skytree.", visited: false },
+        { id: "a-2704", name: "Tokyo Skytree", description: "634 m — world's tallest tower. Tembo Deck (350 m) + optional Tembo Galleria (450 m).", hours: "", tip: "Book online to skip queues. Allow 1.5 hrs total.", visited: false },
+        { id: "a-2705", name: "Solamachi mall", description: "Big shopping/dining complex at Skytree's base.", hours: "", tip: "Good for ramen lunch and the Studio Ghibli shop.", visited: false },
+        { id: "a-2706", name: "Don Quijote Akihabara", description: "Chaotic mega-store with the AKB48 theater on top.", hours: "", tip: "Touristy chaos — fun for 30 min.", visited: false },
+        { id: "a-2707", name: "Super Potato", description: "Vintage video games over several floors.", hours: "", tip: "Akihabara — top floor has playable retro consoles.", visited: false },
+        { id: "a-2708", name: "Yodobashi Camera Akiba", description: "9-floor electronics megastore.", hours: "", tip: "Even non-shoppers find this overwhelming and fun.", visited: false },
+        { id: "a-2709", name: "@Home Cafe", description: "The most foreigner-friendly maid café experience in Akihabara.", hours: "", tip: "Touristy but cultural.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2701", name: "Daikokuya Tempura (Asakusa)", cuisine: "Tendon (tempura over rice)", price: "¥¥", note: "Historic and casual.", visited: false },
+        { id: "r-2702", name: "Asakusa Imahan", cuisine: "Sukiyaki / Shabu-shabu", price: "¥¥¥", note: "Institution; lunch sets are reasonable.", visited: false },
+        { id: "r-2703", name: "Kanda Matsuya", cuisine: "Soba", price: "¥¥", note: "Established 1884. Just south of Akihabara — perfect train-day dinner.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-28", date: "May 28", weekday: "Thursday", city: "Tokyo",
+      title: "Tsukiji + teamLab + Ginza", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2801", name: "Tsukiji Outer Market", description: "Street stalls and tiny restaurants — the surviving outer market after the inner moved to Toyosu.", hours: "Best 08:00–09:30; most stalls close by 14:00", tip: "10 min walk from Celestine. Try fresh uni, otoro, grilled scallops.", visited: false },
+        { id: "a-2802", name: "teamLab Borderless (Azabudai Hills)", description: "Maze-like immersive digital art — moved Feb 2024.", hours: "", tip: "~3 hrs to explore. Tickets MUST be booked online weeks in advance.", visited: false },
+        { id: "a-2803", name: "Itoya (return visit)", description: "Second visit to the 12-floor stationery shrine.", hours: "Until 20:00", tip: "Worth a deeper visit now you know it.", visited: false },
+        { id: "a-2804", name: "Ginza Six rooftop garden", description: "Free rooftop with Ginza views.", hours: "Until 20:30", tip: "Visit at golden hour.", visited: false },
+        { id: "a-2805", name: "Tokyu Plaza Ginza", description: "Sleek architecture; top-floor skyline views.", hours: "", tip: "On the Sukiyabashi crossing.", visited: false },
+        { id: "a-2806", name: "Hama-rikyu Garden", description: "Edo-era lord's tea garden — accessible by Sumida River water bus from Asakusa.", hours: "Closes 17:00", tip: "Fun option if you didn't do it on May 26.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2801", name: "Yamacho (Tsukiji)", cuisine: "Tamagoyaki", price: "¥", note: "Tamagoyaki on a stick — Tsukiji classic.", visited: false },
+        { id: "r-2802", name: "Marutake (Tsukiji)", cuisine: "Tamagoyaki", price: "¥", note: "Tamagoyaki on a stick — Tsukiji classic.", visited: false },
+        { id: "r-2803", name: "Sushi Zanmai Honten", cuisine: "Sushi", price: "¥¥", note: "Sit-down sushi breakfast; opens early.", visited: false },
+        { id: "r-2804", name: "Daiwa Sushi", cuisine: "Sushi", price: "¥¥¥", note: "High-quality, expect a queue.", visited: false },
+        { id: "r-2805", name: "Ginza Kyubey", cuisine: "Sushi (splurge)", price: "¥¥¥¥", note: "Gold standard of accessible top-tier sushi. Reserve via concierge.", visited: false },
+        { id: "r-2806", name: "Tempura Kondo", cuisine: "Tempura (Michelin)", price: "¥¥¥¥", note: "Michelin 2-star tempura counter. Reserve weeks ahead.", visited: false },
+        { id: "r-2807", name: "Ginza Sato Yosuke", cuisine: "Inaniwa udon", price: "¥¥", note: "Casual; quick lunch.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-29", date: "May 29", weekday: "Friday", city: "Tokyo",
+      title: "Day Trip — Nikko / Kamakura / Yokohama", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-2901", name: "Toshogu Shrine (Nikko)", description: "Tokugawa Ieyasu's lavish mausoleum — ornate carvings.", hours: "", tip: "Buy the Nikko All Area Pass (¥4,780) — covers Tobu round-trip + buses.", visited: false },
+        { id: "a-2902", name: "Rinno-ji (Nikko)", description: "Temple complex near Toshogu.", hours: "", tip: "Combine with Toshogu visit.", visited: false },
+        { id: "a-2903", name: "Shinkyo Bridge (Nikko)", description: "Sacred red bridge at the entrance to the shrine area.", hours: "", tip: "Photogenic from the riverbank.", visited: false },
+        { id: "a-2904", name: "Kegon Falls (Nikko)", description: "97 m waterfall, one of Japan's three most beautiful.", hours: "", tip: "Ride the Akechidaira ropeway for views.", visited: false },
+        { id: "a-2905", name: "Kotoku-in / Great Buddha (Kamakura)", description: "Massive bronze Buddha (1252).", hours: "", tip: "Pair with Hasedera, both in Hase area.", visited: false },
+        { id: "a-2906", name: "Hasedera Temple (Kamakura)", description: "Hilltop temple with sea views and an 11-headed Kannon.", hours: "", tip: "Beautiful gardens in any season.", visited: false },
+        { id: "a-2907", name: "Komachi-dori (Kamakura)", description: "Food street running from station to Tsurugaoka Hachimangu.", hours: "", tip: "Lunch and snacks here.", visited: false },
+        { id: "a-2908", name: "Enoshima", description: "Small island with Sea Candle viewpoint, Enoshima Shrine, and seafood at the port.", hours: "", tip: "Take the Enoden train from Kamakura.", visited: false },
+        { id: "a-2909", name: "Sankeien Garden (Yokohama)", description: "Traditional landscape garden with relocated historic buildings.", hours: "", tip: "Quieter Yokohama option.", visited: false },
+        { id: "a-2910", name: "Cup Noodles Museum (Yokohama)", description: "Make-your-own cup noodle museum.", hours: "", tip: "Fun if you have non-temple energy.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-2901", name: "Local izakaya / depachika (Tokyo)", cuisine: "Casual / takeaway", price: "¥¥", note: "Back in Tokyo, casual is best after a day-trip day. Depachika takeaway eaten at a riverside spot also works.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-30", date: "May 30", weekday: "Saturday", city: "Tokyo",
+      title: "Imperial Palace + Shibuya / Harajuku / Meiji", done: false, infoOnly: false, notes: "",
+      attractions: [
+        { id: "a-3001", name: "Imperial Palace Guided Tour", description: "75-min guided walk inside the inner palace grounds, English & Japanese.", hours: "Saturday: 10:00 only", tip: "Free but advance online registration via the Imperial Household Agency required. Arrive by 09:00 with passport for ID check.", visited: false },
+        { id: "a-3002", name: "Imperial Palace East Gardens", description: "Beautifully maintained gardens — backup if the tour is full.", hours: "", tip: "Free, no booking needed.", visited: false },
+        { id: "a-3003", name: "Meiji Shrine", description: "Tokyo's most important Shinto shrine, in a forest of 100,000 donated trees.", hours: "", tip: "1 min walk from Harajuku Station.", visited: false },
+        { id: "a-3004", name: "Takeshita Street (Harajuku)", description: "Kawaii fashion, crepes, sweets — the loudest stretch of youth Tokyo.", hours: "", tip: "Mostly tourist-trap now but worth a stroll.", visited: false },
+        { id: "a-3005", name: "Omotesando", description: "The 'Champs-Élysées of Tokyo' — architecture-driven shopping street.", hours: "", tip: "Architecture lovers should walk the full length.", visited: false },
+        { id: "a-3006", name: "Yoyogi Park", description: "Large park between Meiji and Shibuya.", hours: "", tip: "On Sundays: rockabilly dancers and drum circles.", visited: false },
+        { id: "a-3007", name: "Shibuya Crossing", description: "World's busiest pedestrian crossing.", hours: "", tip: "Best photographed from Shibuya Sky, Magnet by Shibuya 109 rooftop, or Starbucks Tsutaya (free).", visited: false },
+        { id: "a-3008", name: "Hachiko statue", description: "Outside Shibuya Station — the famous loyal-dog memorial.", hours: "", tip: "Quick stop; expect a crowd.", visited: false },
+        { id: "a-3009", name: "Shibuya Sky", description: "Open-air observation deck atop Shibuya Scramble Square.", hours: "", tip: "Best at sunset / blue hour. Book online.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-3001", name: "Tokyo Ramen Street", cuisine: "Ramen", price: "¥¥", note: "8 top ramen shops, B1F Tokyo Station Yaesu side.", visited: false },
+        { id: "r-3002", name: "T's Tantan", cuisine: "Vegan tantanmen", price: "¥¥", note: "Keiyo St., Tokyo Station.", visited: false },
+        { id: "r-3003", name: "Uobei (Shibuya)", cuisine: "Kaiten sushi", price: "¥¥", note: "Fun & cheap conveyor-belt sushi.", visited: false },
+        { id: "r-3004", name: "Ichiran", cuisine: "Ramen", price: "¥¥", note: "Famous solo-booth ramen experience.", visited: false },
+        { id: "r-3005", name: "Nabezo Shibuya", cuisine: "Shabu-shabu / Sukiyaki AYCE", price: "¥¥¥", note: "All-you-can-eat shabu-shabu/sukiyaki.", visited: false },
+        { id: "r-3006", name: "Yakiniku Jumbo Hanare (Shirokanedai)", cuisine: "Yakiniku (splurge)", price: "¥¥¥¥", note: "Premium yakiniku — reservations only, weeks ahead.", visited: false },
+        { id: "r-3007", name: "Ginza Corridor-gai", cuisine: "Yakitori / izakaya", price: "¥¥", note: "Relaxed last evening near hotel.", visited: false }
+      ]
+    },
+    {
+      id: "2026-05-31", date: "May 31", weekday: "Sunday", city: "Tokyo",
+      title: "Final Morning + Flight Home", done: false, infoOnly: false,
+      notes: "Flight: LY92 Tokyo Narita (T1) → Tel Aviv. Depart 19:55 (May 31), arrive 03:05 (June 1). Leave Celestine by 16:30 for the airport.",
+      attractions: [
+        { id: "a-3101", name: "Meiji Shrine + Harajuku/Omotesando (Option 1)", description: "Quiet, green, easy. Good if you missed it on May 30.", hours: "", tip: "Most relaxed morning option.", visited: false },
+        { id: "a-3102", name: "Senso-ji + Nakamise-dori (Option 2)", description: "Last-minute souvenir & food shopping in Asakusa.", hours: "", tip: "25 min subway from Celestine.", visited: false },
+        { id: "a-3103", name: "Shinjuku Gyoen (Option 3)", description: "Slow, peaceful park morning.", hours: "", tip: "20 min on the Yamanote line.", visited: false },
+        { id: "a-3104", name: "Mitsukoshi Ginza depachika (Option 4)", description: "Edible souvenirs — matcha, sweets, beautifully wrapped boxes.", hours: "", tip: "Walking distance from hotel.", visited: false }
+      ],
+      restaurants: [
+        { id: "r-3101", name: "Narita T1 dining", cuisine: "Soba / ramen / cafe", price: "¥¥", note: "Tsutaya cafe, Kayaba ramen, Kikyo soba — surprisingly good airport food. Leave Celestine by 16:30 for LY92 19:55.", visited: false }
+      ]
+    }
+  ];
+
+  /* =========================================================================
+     Helpers: id, escape, maps URL
+     ========================================================================= */
+  function newId() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    return "id-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  function esc(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function autoMapsUrl(name, city) {
+    var cityName = city === "Fuji" ? "Kawaguchiko" : city === "Flight" ? "Japan" : city;
+    return "https://maps.google.com/?q=" + encodeURIComponent(name + " Japan " + cityName);
+  }
+  function getMapsHref(item, city) {
+    var u = (item && item.mapsUrl) ? String(item.mapsUrl).trim() : "";
+    if (!u) return autoMapsUrl(item.name, city);
+    if (/^https?:\/\//i.test(u)) return u;
+    if (/^www\./i.test(u)) return "https://" + u;
+    return "https://maps.google.com/?q=" + encodeURIComponent(u);
+  }
+
+  /* =========================================================================
+     Storage
+     ========================================================================= */
+  function loadStored() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { days: clone(defaultData), customSections: [] };
+      var parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return { days: parsed, customSections: [] };
+      if (parsed && Array.isArray(parsed.days) && parsed.days.length > 0) {
+        return {
+          days: parsed.days,
+          customSections: Array.isArray(parsed.customSections) ? parsed.customSections : []
+        };
+      }
+    } catch (e) {}
+    return { days: clone(defaultData), customSections: [] };
+  }
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
+
+  /* =========================================================================
+     State
+     ========================================================================= */
+  var state = (function () {
+    var s = loadStored();
+    return {
+      days: s.days,
+      customSections: s.customSections,
+      selectedDayId: localStorage.getItem(SELECTED_DAY_KEY) || s.days[0].id,
+      editing: null,         // item id currently in edit mode
+      adding: null,          // section key for add form: "attractions" | "restaurants" | section id
+      renamingSection: null  // section id being renamed
+    };
+  })();
+
+  function persist() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ days: state.days, customSections: state.customSections }));
+      localStorage.setItem(SELECTED_DAY_KEY, state.selectedDayId);
+    } catch (e) {}
+  }
+
+  function getSelectedDay() {
+    var i = state.days.findIndex(function (d) { return d.id === state.selectedDayId; });
+    return i >= 0 ? state.days[i] : state.days[0];
+  }
+  function getSelectedDayIndex() {
+    var i = state.days.findIndex(function (d) { return d.id === state.selectedDayId; });
+    return i >= 0 ? i : 0;
+  }
+
+  function updateSelectedDay(mutator) {
+    var idx = getSelectedDayIndex();
+    var copy = JSON.parse(JSON.stringify(state.days[idx]));
+    mutator(copy);
+    state.days[idx] = copy;
+    persist();
+    render();
+  }
+
+  /* =========================================================================
+     Templates / render
+     ========================================================================= */
+  function html(strings) {
+    // Simple tagged-template helper that returns the joined string.
+    // (We rely on caller to esc() user-supplied parts.)
+    var out = strings[0];
+    for (var i = 1; i < arguments.length; i++) out += arguments[i] + strings[i];
+    return out;
+  }
+
+  function renderPills() {
+    var parts = state.days.map(function (d, i) {
+      var icon = cityIcon[d.city] || "•";
+      var theme = cityClass[d.city] || "";
+      var active = d.id === state.selectedDayId;
+      return (
+        '<button class="pill ' + theme + (active ? " is-active" : "") + (d.done ? " is-done" : "") +
+        '" data-action="select-day" data-day-id="' + esc(d.id) + '" aria-label="Day ' + (i + 1) + ' — ' + esc(d.date) + ' ' + esc(d.city) + (d.done ? ", done" : "") + '">' +
+          '<div class="num-label">Day</div>' +
+          '<div class="num-big">' + (i + 1) + '</div>' +
+          '<div class="pill-meta"><span class="icon">' + icon + '</span><span>' + esc(d.date.replace(/^May\s*/, "")) + '</span></div>' +
+          '<span class="pill-check" aria-hidden="true">✓</span>' +
+        '</button>'
+      );
+    }).join("");
+    return '<div class="pills" id="pills">' + parts + '</div>';
+  }
+
+  function renderHero(day, index) {
+    var theme = cityClass[day.city] || "theme-flight";
+    var doneOn = day.done ? "is-done" : "";
+    var doneLabel = day.done ? "✓ Day done" : "Mark day done";
+    var cityLine = day.city === "Flight" ? "In transit" : esc(day.city);
+    var monthLabel = day.date.replace(/(\w+) (\d+)/, "$1") .toUpperCase();   // "MAY"
+    var dayNum = (day.date.match(/\d+/) || [""])[0];
+    var label = monthLabel + " · " + esc((day.city || "").toUpperCase()) + " " + dayNum;
+    return (
+      '<section class="overview ' + theme + '">' +
+        '<div class="ov-row">' +
+          '<div>' +
+            '<div class="ov-label">' + label + '</div>' +
+            '<h2>' + esc(day.title) + '</h2>' +
+            '<p class="ov-sub">Day ' + (index + 1) + ' of ' + state.days.length + ' · ' + esc(day.weekday) + ' · ' + cityLine + '</p>' +
+          '</div>' +
+          '<div class="ov-cal" aria-hidden="true">📅</div>' +
+        '</div>' +
+        '<div class="ov-actions">' +
+          '<button class="btn-done ' + doneOn + '" data-action="toggle-done">' + doneLabel + '</button>' +
+        '</div>' +
+      '</section>'
+    );
+  }
+
+  function renderAttractionEditor(item, isNew) {
+    return (
+      '<form class="form-block" data-form="attraction" data-id="' + esc(item.id) + '" data-new="' + (isNew ? "1" : "") + '" autocomplete="off">' +
+        '<h4>' + (isNew ? "Add a place" : "Edit place") + '</h4>' +
+        '<div class="form-grid">' +
+          '<input class="input" name="name" placeholder="Name" required value="' + esc(item.name || "") + '">' +
+          '<textarea class="textarea" name="description" placeholder="Description">' + esc(item.description || "") + '</textarea>' +
+          '<input class="input" name="hours" placeholder="Opening hours (optional)" value="' + esc(item.hours || "") + '">' +
+          '<textarea class="textarea" name="tip" placeholder="Tip (optional)">' + esc(item.tip || "") + '</textarea>' +
+          '<input class="input" name="mapsUrl" placeholder="Google Maps link or address (optional)" value="' + esc(item.mapsUrl || "") + '">' +
+        '</div>' +
+        '<div class="form-actions">' +
+          '<button type="submit" class="btn-primary">Save</button>' +
+          '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+        '</div>' +
+      '</form>'
+    );
+  }
+  function renderRestaurantEditor(item, isNew) {
+    return (
+      '<form class="form-block" data-form="restaurant" data-id="' + esc(item.id) + '" data-new="' + (isNew ? "1" : "") + '" autocomplete="off">' +
+        '<h4>' + (isNew ? "Add a restaurant" : "Edit restaurant") + '</h4>' +
+        '<div class="form-grid">' +
+          '<input class="input" name="name" placeholder="Name" required value="' + esc(item.name || "") + '">' +
+          '<input class="input" name="cuisine" placeholder="Cuisine type" value="' + esc(item.cuisine || "") + '">' +
+          '<input class="input" name="price" placeholder="Estimated price (e.g. ¥¥)" value="' + esc(item.price || "") + '">' +
+          '<textarea class="textarea" name="note" placeholder="Note">' + esc(item.note || "") + '</textarea>' +
+          '<input class="input" name="mapsUrl" placeholder="Google Maps link or address (optional)" value="' + esc(item.mapsUrl || "") + '">' +
+        '</div>' +
+        '<div class="form-actions">' +
+          '<button type="submit" class="btn-primary">Save</button>' +
+          '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+        '</div>' +
+      '</form>'
+    );
+  }
+  function renderGenericEditor(item, isNew, sectionId, sectionLabel) {
+    return (
+      '<form class="form-block" data-form="custom" data-id="' + esc(item.id) + '" data-new="' + (isNew ? "1" : "") + '" data-section-id="' + esc(sectionId) + '" autocomplete="off">' +
+        '<h4>' + (isNew ? "Add to " + esc(sectionLabel) : "Edit item") + '</h4>' +
+        '<div class="form-grid">' +
+          '<input class="input" name="name" placeholder="Name" required value="' + esc(item.name || "") + '">' +
+          '<textarea class="textarea" name="description" placeholder="Description (optional)">' + esc(item.description || "") + '</textarea>' +
+          '<textarea class="textarea" name="note" placeholder="Note (optional)">' + esc(item.note || "") + '</textarea>' +
+          '<input class="input" name="mapsUrl" placeholder="Google Maps link or address (optional)" value="' + esc(item.mapsUrl || "") + '">' +
+        '</div>' +
+        '<div class="form-actions">' +
+          '<button type="submit" class="btn-primary">Save</button>' +
+          '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+        '</div>' +
+      '</form>'
+    );
+  }
+
+  function cardHeroBlock(emoji, badgeLabel) {
+    return (
+      '<div class="card-hero">' +
+        '<span class="hero-emoji" aria-hidden="true">' + emoji + '</span>' +
+        '<span class="hero-pattern" aria-hidden="true">' + emoji + '</span>' +
+        '<span class="card-badge">' + badgeLabel + '</span>' +
+      '</div>'
+    );
+  }
+
+  function renderAttractionCard(item, day) {
+    if (state.editing === item.id) return '<div class="card kind-attraction" style="overflow:visible">' + renderAttractionEditor(item, false) + '</div>';
+    var visitedClass = item.visited ? " is-visited" : "";
+    var theme = cityClass[day.city] || "theme-flight";
+    var icon = cityIcon[day.city] || "📍";
+    var visitedChip = item.visited
+      ? '<button class="chip is-on" data-action="toggle-visited" data-id="' + esc(item.id) + '">✓ Visited</button>'
+      : '<button class="chip" data-action="toggle-visited" data-id="' + esc(item.id) + '">Mark visited</button>';
+    return (
+      '<article class="card kind-attraction ' + theme + visitedClass + '">' +
+        cardHeroBlock(icon, "PLACE") +
+        '<div class="card-body">' +
+          '<h4 class="card-name">' + esc(item.name) + '</h4>' +
+          (item.description ? '<p class="card-desc">' + esc(item.description) + '</p>' : '') +
+          (item.hours ? '<p class="meta-line"><span class="lab">⏰ Hours</span>' + esc(item.hours) + '</p>' : '') +
+          (item.tip ? '<p class="meta-line"><span class="lab">💡 Tip</span>' + esc(item.tip) + '</p>' : '') +
+          '<div class="card-footer">' +
+            '<a class="map-btn" target="_blank" rel="noopener noreferrer" href="' + esc(getMapsHref(item, day.city)) + '" aria-label="Open ' + esc(item.name) + ' in Google Maps"><span class="pin">📍</span> Navigate</a>' +
+            '<div class="card-actions">' +
+              visitedChip +
+              '<button class="chip" data-action="edit" data-id="' + esc(item.id) + '">✏️</button>' +
+              '<button class="chip danger" data-action="delete-attraction" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '">🗑️</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  function renderRestaurantCard(item, day) {
+    if (state.editing === item.id) return '<div class="card kind-restaurant" style="overflow:visible">' + renderRestaurantEditor(item, false) + '</div>';
+    var visitedClass = item.visited ? " is-visited" : "";
+    var theme = cityClass[day.city] || "theme-flight";
+    var visitedChip = item.visited
+      ? '<button class="chip is-on" data-action="toggle-visited-r" data-id="' + esc(item.id) + '">✓ Visited</button>'
+      : '<button class="chip" data-action="toggle-visited-r" data-id="' + esc(item.id) + '">Mark visited</button>';
+    var tags = '';
+    if (item.cuisine) tags += '<span class="tag tag-cuisine">🍴 ' + esc(item.cuisine) + '</span>';
+    if (item.price) tags += '<span class="tag tag-price">💴 ' + esc(item.price) + '</span>';
+    return (
+      '<article class="card kind-restaurant ' + theme + visitedClass + '">' +
+        cardHeroBlock("🍱", "FOOD") +
+        '<div class="card-body">' +
+          '<h4 class="card-name">' + esc(item.name) + '</h4>' +
+          (tags ? '<div class="tag-row">' + tags + '</div>' : '') +
+          (item.note ? '<p class="meta-line">📝 ' + esc(item.note) + '</p>' : '') +
+          '<div class="card-footer">' +
+            '<a class="map-btn" target="_blank" rel="noopener noreferrer" href="' + esc(getMapsHref(item, day.city)) + '" aria-label="Open ' + esc(item.name) + ' in Google Maps"><span class="pin">📍</span> Navigate</a>' +
+            '<div class="card-actions">' +
+              visitedChip +
+              '<button class="chip" data-action="edit-r" data-id="' + esc(item.id) + '">✏️</button>' +
+              '<button class="chip danger" data-action="delete-restaurant" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '">🗑️</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  function renderGenericCard(item, day, sectionId, sectionLabel) {
+    if (state.editing === item.id) return '<div class="card kind-custom" style="overflow:visible">' + renderGenericEditor(item, false, sectionId, sectionLabel) + '</div>';
+    var visitedClass = item.visited ? " is-visited" : "";
+    var theme = cityClass[day.city] || "theme-flight";
+    var visitedChip = item.visited
+      ? '<button class="chip is-on" data-action="toggle-visited-c" data-id="' + esc(item.id) + '" data-section-id="' + esc(sectionId) + '">✓ Visited</button>'
+      : '<button class="chip" data-action="toggle-visited-c" data-id="' + esc(item.id) + '" data-section-id="' + esc(sectionId) + '">Mark visited</button>';
+    var badge = sectionLabel ? sectionLabel.toUpperCase().slice(0, 12) : "ITEM";
+    return (
+      '<article class="card kind-custom ' + theme + visitedClass + '">' +
+        cardHeroBlock("✨", esc(badge)) +
+        '<div class="card-body">' +
+          '<h4 class="card-name">' + esc(item.name) + '</h4>' +
+          (item.description ? '<p class="card-desc">' + esc(item.description) + '</p>' : '') +
+          (item.note ? '<p class="meta-line">📝 ' + esc(item.note) + '</p>' : '') +
+          '<div class="card-footer">' +
+            '<a class="map-btn" target="_blank" rel="noopener noreferrer" href="' + esc(getMapsHref(item, day.city)) + '" aria-label="Open ' + esc(item.name) + ' in Google Maps"><span class="pin">📍</span> Navigate</a>' +
+            '<div class="card-actions">' +
+              visitedChip +
+              '<button class="chip" data-action="edit-c" data-id="' + esc(item.id) + '" data-section-id="' + esc(sectionId) + '">✏️</button>' +
+              '<button class="chip danger" data-action="delete-custom" data-id="' + esc(item.id) + '" data-section-id="' + esc(sectionId) + '" data-name="' + esc(item.name) + '">🗑️</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  function renderAttractionsSection(day) {
+    var addOpen = state.adding === "attractions";
+    var emptyMsg = (day.attractions.length === 0 && !addOpen)
+      ? '<p class="empty">No attractions yet — tap "+ Add Place" to add one.</p>'
+      : '';
+    return (
+      '<section class="section kind-attractions">' +
+        '<div class="section-head">' +
+          '<h3><span class="icon">🗺️</span> Attractions <span class="count">' + day.attractions.length + '</span></h3>' +
+          '<button class="btn-add attr" data-action="add-attraction">+ Add Place</button>' +
+        '</div>' +
+        (addOpen ? renderAttractionEditor({ id: newId() }, true) : '') +
+        '<div class="cards">' +
+          day.attractions.map(function (a) { return renderAttractionCard(a, day); }).join("") +
+        '</div>' +
+        emptyMsg +
+      '</section>'
+    );
+  }
+
+  function renderRestaurantsSection(day) {
+    var addOpen = state.adding === "restaurants";
+    var emptyMsg = (day.restaurants.length === 0 && !addOpen)
+      ? '<p class="empty">No restaurants yet — tap "+ Add Restaurant" to add one.</p>'
+      : '';
+    return (
+      '<section class="section kind-restaurants">' +
+        '<div class="section-head">' +
+          '<h3><span class="icon">🍱</span> Restaurants <span class="count">' + day.restaurants.length + '</span></h3>' +
+          '<button class="btn-add rest" data-action="add-restaurant">+ Add Restaurant</button>' +
+        '</div>' +
+        (addOpen ? renderRestaurantEditor({ id: newId() }, true) : '') +
+        '<div class="cards">' +
+          day.restaurants.map(function (r) { return renderRestaurantCard(r, day); }).join("") +
+        '</div>' +
+        emptyMsg +
+      '</section>'
+    );
+  }
+
+  function renderCustomSection(section, day) {
+    var items = (day.customItems && day.customItems[section.id]) || [];
+    var addOpen = state.adding === section.id;
+    var renaming = state.renamingSection === section.id;
+    var head = renaming
+      ? ('<form class="rename-form" data-form="rename-section" data-section-id="' + esc(section.id) + '">' +
+            '<input class="input" name="label" required value="' + esc(section.label) + '" placeholder="Section name">' +
+            '<button type="submit" class="btn-primary">Save</button>' +
+            '<button type="button" class="btn-secondary" data-action="cancel-rename">Cancel</button>' +
+         '</form>')
+      : ('<h3><span class="icon">✨</span> ' + esc(section.label) + ' <span class="count">' + items.length + '</span></h3>');
+    var tools = renaming ? '' :
+      '<div class="section-tools">' +
+        '<button class="btn-add cust" data-action="add-custom" data-section-id="' + esc(section.id) + '" data-section-label="' + esc(section.label) + '">+ Add</button>' +
+        '<button class="btn-icon" data-action="rename-section" data-section-id="' + esc(section.id) + '" title="Rename section">✏️</button>' +
+        '<button class="btn-icon danger" data-action="delete-section" data-section-id="' + esc(section.id) + '" data-section-label="' + esc(section.label) + '" title="Delete section">🗑️</button>' +
+      '</div>';
+    var emptyMsg = (items.length === 0 && !addOpen && !renaming)
+      ? '<p class="empty">Nothing here yet — tap "+ Add" to add to ' + esc(section.label) + '.</p>'
+      : '';
+    return (
+      '<section class="section kind-custom">' +
+        '<div class="section-head">' + head + tools + '</div>' +
+        (addOpen ? renderGenericEditor({ id: newId() }, true, section.id, section.label) : '') +
+        '<div class="cards">' +
+          items.map(function (it) { return renderGenericCard(it, day, section.id, section.label); }).join("") +
+        '</div>' +
+        emptyMsg +
+      '</section>'
+    );
+  }
+
+  function renderNewSectionForm() {
+    if (state.adding === "__new_section__") {
+      return (
+        '<form class="form-block" data-form="new-section" autocomplete="off" style="margin-top:14px;">' +
+          '<h4>New section</h4>' +
+          '<div class="form-grid">' +
+            '<input class="input" name="label" required placeholder="Section name (e.g. Bars, Onsens, Shopping)" autofocus>' +
+          '</div>' +
+          '<div class="form-actions">' +
+            '<button type="submit" class="btn-primary">Create section</button>' +
+            '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+          '</div>' +
+        '</form>'
+      );
+    }
+    return (
+      '<div class="footer-tools">' +
+        '<button class="btn-newsection" data-action="open-new-section">+ New section (e.g. Bars)</button>' +
+        '<p class="footer-help">New sections appear on every day, so you can fill in items per-day.</p>' +
+      '</div>'
+    );
+  }
+
+  function renderDayContent(day) {
+    if (day.infoOnly) {
+      return (
+        '<div class="content">' +
+          '<div class="notes-card">' +
+            '<h3>Flight & pre-trip notes</h3>' +
+            '<p>' + esc(day.notes) + '</p>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+    var noteBlock = day.notes ? ('<div class="tip-card"><p>' + esc(day.notes) + '</p></div>') : '';
+    return (
+      '<div class="content">' +
+        noteBlock +
+        renderAttractionsSection(day) +
+        renderRestaurantsSection(day) +
+        state.customSections.map(function (sec) { return renderCustomSection(sec, day); }).join("") +
+        renderNewSectionForm() +
+      '</div>'
+    );
+  }
+
+  function render() {
+    var day = getSelectedDay();
+    var index = getSelectedDayIndex();
+    var html =
+      '<div class="app">' +
+        '<header class="topbar">' +
+          '<div class="brand">' +
+            '<div class="brand-mark" aria-hidden="true">🗾</div>' +
+            '<div class="brand-text">' +
+              '<div class="brand-title">Japan 2026</div>' +
+              '<div class="brand-sub">13 May → 31 May</div>' +
+            '</div>' +
+          '</div>' +
+          '<button class="btn-reset" data-action="reset">Reset</button>' +
+        '</header>' +
+        '<div class="pills-wrap">' + renderPills() + '</div>' +
+        '<main class="day-view">' +
+          renderHero(day, index) +
+          renderDayContent(day) +
+        '</main>' +
+      '</div>';
+    document.getElementById("root").innerHTML = html;
+
+    // Scroll the active pill into view
+    var activePill = document.querySelector(".pill.is-active");
+    if (activePill) {
+      activePill.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    }
+  }
+
+  /* =========================================================================
+     Event handling (delegated)
+     ========================================================================= */
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-action]");
+    if (!t) return;
+    var action = t.dataset.action;
+
+    if (action === "select-day") {
+      state.selectedDayId = t.dataset.dayId;
+      state.adding = null; state.editing = null; state.renamingSection = null;
+      persist();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (action === "reset") {
+      if (confirm("Reset all edits and reload the original itinerary? This will erase any places you added or changed, and remove any custom sections.")) {
+        state.days = JSON.parse(JSON.stringify(defaultData));
+        state.customSections = [];
+        state.selectedDayId = state.days[0].id;
+        state.adding = null; state.editing = null; state.renamingSection = null;
+        persist(); render();
+      }
+      return;
+    }
+
+    if (action === "toggle-done") {
+      updateSelectedDay(function (d) { d.done = !d.done; });
+      return;
+    }
+
+    /* Attractions */
+    if (action === "add-attraction") { state.adding = "attractions"; state.editing = null; render(); return; }
+    if (action === "edit") { state.editing = t.dataset.id; state.adding = null; render(); return; }
+    if (action === "toggle-visited") {
+      var id = t.dataset.id;
+      updateSelectedDay(function (d) { d.attractions = d.attractions.map(function (a) { return a.id === id ? Object.assign({}, a, { visited: !a.visited }) : a; }); });
+      return;
+    }
+    if (action === "delete-attraction") {
+      var aid = t.dataset.id;
+      if (confirm('Delete "' + t.dataset.name + '"?')) {
+        updateSelectedDay(function (d) { d.attractions = d.attractions.filter(function (a) { return a.id !== aid; }); });
+      }
+      return;
+    }
+
+    /* Restaurants */
+    if (action === "add-restaurant") { state.adding = "restaurants"; state.editing = null; render(); return; }
+    if (action === "edit-r") { state.editing = t.dataset.id; state.adding = null; render(); return; }
+    if (action === "toggle-visited-r") {
+      var rid = t.dataset.id;
+      updateSelectedDay(function (d) { d.restaurants = d.restaurants.map(function (x) { return x.id === rid ? Object.assign({}, x, { visited: !x.visited }) : x; }); });
+      return;
+    }
+    if (action === "delete-restaurant") {
+      var rid2 = t.dataset.id;
+      if (confirm('Delete "' + t.dataset.name + '"?')) {
+        updateSelectedDay(function (d) { d.restaurants = d.restaurants.filter(function (x) { return x.id !== rid2; }); });
+      }
+      return;
+    }
+
+    /* Custom sections */
+    if (action === "open-new-section") { state.adding = "__new_section__"; state.editing = null; render(); return; }
+    if (action === "rename-section") { state.renamingSection = t.dataset.sectionId; render(); return; }
+    if (action === "cancel-rename") { state.renamingSection = null; render(); return; }
+    if (action === "delete-section") {
+      var sid = t.dataset.sectionId;
+      if (confirm('Delete the "' + t.dataset.sectionLabel + '" section from every day? Items in it on every day will be lost.')) {
+        state.customSections = state.customSections.filter(function (s) { return s.id !== sid; });
+        state.days = state.days.map(function (d) {
+          if (d.customItems && d.customItems[sid]) {
+            var copy = Object.assign({}, d, { customItems: Object.assign({}, d.customItems) });
+            delete copy.customItems[sid];
+            return copy;
+          }
+          return d;
+        });
+        persist(); render();
+      }
+      return;
+    }
+    if (action === "add-custom") { state.adding = t.dataset.sectionId; state.editing = null; render(); return; }
+    if (action === "edit-c") { state.editing = t.dataset.id; state.adding = null; render(); return; }
+    if (action === "toggle-visited-c") {
+      var cid = t.dataset.id, csid = t.dataset.sectionId;
+      updateSelectedDay(function (d) {
+        d.customItems = d.customItems || {};
+        var arr = (d.customItems[csid] || []).map(function (x) { return x.id === cid ? Object.assign({}, x, { visited: !x.visited }) : x; });
+        d.customItems[csid] = arr;
+      });
+      return;
+    }
+    if (action === "delete-custom") {
+      var cid2 = t.dataset.id, csid2 = t.dataset.sectionId;
+      if (confirm('Delete "' + t.dataset.name + '"?')) {
+        updateSelectedDay(function (d) {
+          if (!d.customItems || !d.customItems[csid2]) return;
+          d.customItems[csid2] = d.customItems[csid2].filter(function (x) { return x.id !== cid2; });
+        });
+      }
+      return;
+    }
+
+    if (action === "cancel-form") {
+      state.adding = null; state.editing = null; render();
+      return;
+    }
+  });
+
+  document.addEventListener("submit", function (e) {
+    var form = e.target.closest("form[data-form]");
+    if (!form) return;
+    e.preventDefault();
+    var kind = form.dataset.form;
+    var data = {};
+    var inputs = form.querySelectorAll("input, textarea");
+    for (var i = 0; i < inputs.length; i++) data[inputs[i].name] = inputs[i].value.trim();
+
+    if (kind === "attraction") {
+      if (!data.name) return;
+      var isNew = form.dataset.new === "1";
+      var id = form.dataset.id;
+      updateSelectedDay(function (d) {
+        if (isNew) d.attractions.push({ id: id, name: data.name, description: data.description, hours: data.hours, tip: data.tip, mapsUrl: data.mapsUrl, visited: false });
+        else d.attractions = d.attractions.map(function (a) { return a.id === id ? Object.assign({}, a, { name: data.name, description: data.description, hours: data.hours, tip: data.tip, mapsUrl: data.mapsUrl }) : a; });
+      });
+      state.adding = null; state.editing = null; render();
+      return;
+    }
+    if (kind === "restaurant") {
+      if (!data.name) return;
+      var isNew2 = form.dataset.new === "1";
+      var id2 = form.dataset.id;
+      updateSelectedDay(function (d) {
+        if (isNew2) d.restaurants.push({ id: id2, name: data.name, cuisine: data.cuisine, price: data.price, note: data.note, mapsUrl: data.mapsUrl, visited: false });
+        else d.restaurants = d.restaurants.map(function (x) { return x.id === id2 ? Object.assign({}, x, { name: data.name, cuisine: data.cuisine, price: data.price, note: data.note, mapsUrl: data.mapsUrl }) : x; });
+      });
+      state.adding = null; state.editing = null; render();
+      return;
+    }
+    if (kind === "custom") {
+      if (!data.name) return;
+      var isNew3 = form.dataset.new === "1";
+      var id3 = form.dataset.id;
+      var sid = form.dataset.sectionId;
+      updateSelectedDay(function (d) {
+        d.customItems = d.customItems || {};
+        var arr = d.customItems[sid] || [];
+        if (isNew3) arr = arr.concat([{ id: id3, name: data.name, description: data.description, note: data.note, mapsUrl: data.mapsUrl, visited: false }]);
+        else arr = arr.map(function (x) { return x.id === id3 ? Object.assign({}, x, { name: data.name, description: data.description, note: data.note, mapsUrl: data.mapsUrl }) : x; });
+        d.customItems[sid] = arr;
+      });
+      state.adding = null; state.editing = null; render();
+      return;
+    }
+    if (kind === "new-section") {
+      if (!data.label) return;
+      state.customSections = state.customSections.concat([{ id: newId(), label: data.label }]);
+      state.adding = null; persist(); render();
+      return;
+    }
+    if (kind === "rename-section") {
+      if (!data.label) return;
+      var rsid = form.dataset.sectionId;
+      state.customSections = state.customSections.map(function (s) { return s.id === rsid ? Object.assign({}, s, { label: data.label }) : s; });
+      state.renamingSection = null; persist(); render();
+      return;
+    }
+  });
+
+  /* =========================================================================
+     Init
+     ========================================================================= */
+  render();
+})();
+</script>
+</body>
+</html>
