@@ -1800,19 +1800,20 @@ a { color: inherit; text-decoration: none; }
   }
 
   function renderAttractionsSection(day) {
+    var attractions = Array.isArray(day.attractions) ? day.attractions : [];
     var addOpen = state.adding === "attractions";
-    var emptyMsg = (day.attractions.length === 0 && !addOpen)
+    var emptyMsg = (attractions.length === 0 && !addOpen)
       ? '<p class="empty">No attractions yet — tap "+ Add Place" to add one.</p>'
       : '';
     return (
       '<section class="section kind-attractions">' +
         '<div class="section-head">' +
-          '<h3><span class="icon">🗺️</span> Attractions <span class="count">' + day.attractions.length + '</span></h3>' +
+          '<h3><span class="icon">🗺️</span> Attractions <span class="count">' + attractions.length + '</span></h3>' +
           '<button class="btn-add attr" data-action="add-attraction">+ Add Place</button>' +
         '</div>' +
         (addOpen ? renderAttractionEditor({ id: newId() }, true) : '') +
         '<div class="cards">' +
-          day.attractions.map(function (a) { return renderAttractionCard(a, day); }).join("") +
+          attractions.map(function (a) { return renderAttractionCard(a, day); }).join("") +
         '</div>' +
         emptyMsg +
       '</section>'
@@ -1820,19 +1821,20 @@ a { color: inherit; text-decoration: none; }
   }
 
   function renderRestaurantsSection(day) {
+    var restaurants = Array.isArray(day.restaurants) ? day.restaurants : [];
     var addOpen = state.adding === "restaurants";
-    var emptyMsg = (day.restaurants.length === 0 && !addOpen)
+    var emptyMsg = (restaurants.length === 0 && !addOpen)
       ? '<p class="empty">No restaurants yet — tap "+ Add Restaurant" to add one.</p>'
       : '';
     return (
       '<section class="section kind-restaurants">' +
         '<div class="section-head">' +
-          '<h3><span class="icon">🍱</span> Restaurants <span class="count">' + day.restaurants.length + '</span></h3>' +
+          '<h3><span class="icon">🍱</span> Restaurants <span class="count">' + restaurants.length + '</span></h3>' +
           '<button class="btn-add rest" data-action="add-restaurant">+ Add Restaurant</button>' +
         '</div>' +
         (addOpen ? renderRestaurantEditor({ id: newId() }, true) : '') +
         '<div class="cards">' +
-          day.restaurants.map(function (r) { return renderRestaurantCard(r, day); }).join("") +
+          restaurants.map(function (r) { return renderRestaurantCard(r, day); }).join("") +
         '</div>' +
         emptyMsg +
       '</section>'
@@ -2620,7 +2622,14 @@ a { color: inherit; text-decoration: none; }
       try {
         if (c && typeof c === "object") {
           state.trip = c.trip ? Object.assign({}, defaultTrip, c.trip) : clone(defaultTrip);
-          state.days = (Array.isArray(c.days) && c.days.length) ? c.days : clone(defaultData);
+          var rawDays = (Array.isArray(c.days) && c.days.length) ? c.days : clone(defaultData);
+          // Normalize: ensure every day has arrays the renderers depend on.
+          state.days = rawDays.map(function (d) {
+            return Object.assign({ attractions: [], restaurants: [], customItems: {} }, d,
+              { attractions: Array.isArray(d.attractions) ? d.attractions : [],
+                restaurants: Array.isArray(d.restaurants) ? d.restaurants : [],
+                customItems: (d.customItems && typeof d.customItems === "object") ? d.customItems : {} });
+          });
           state.customSections = Array.isArray(c.customSections) ? c.customSections : [];
           state.locations = Array.isArray(c.locations) ? c.locations : [];
           if (!state.days.some(function (d) { return d.id === state.selectedDayId; })) state.selectedDayId = state.days[0].id;

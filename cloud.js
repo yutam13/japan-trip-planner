@@ -32,8 +32,17 @@
     return;
   }
 
+  // storageKey scopes auth tokens to this project so other Supabase projects
+  // sharing the same browser profile don't interfere.
+  var STORAGE_KEY_AUTH = "trip-planner-auth";
   var sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: STORAGE_KEY_AUTH,
+      flowType: "pkce"
+    }
   });
 
   var APP_URL = CFG.APP_URL || (location.origin + location.pathname);
@@ -49,7 +58,8 @@
     channel: null,
     saveTimer: null,
     pendingRemote: null,
-    modal: null         // which modal is open: 'auth'|'trips'|'share'|'recover'|null
+    modal: null,        // which modal is open: 'auth'|'trips'|'share'|'recover'|null
+    loggingIn: false    // guard: prevent duplicate afterLogin() calls
   };
 
   function esc(s) {
@@ -146,27 +156,40 @@
     }
     return '<span class="av">☁</span><span class="lbl">Sign in</span>';
   }
+  var _topbarObserver = null;
   function mountAccountButton() {
     var right = document.querySelector(".topbar-right");
     if (!right) return;
-    var btn = document.getElementById("cloud-acct-btn");
-    if (!btn) {
-      btn = document.createElement("button");
-      btn.id = "cloud-acct-btn";
-      btn.className = "cloud-acct";
-      btn.addEventListener("click", function () {
-        if (S.user) openTripsModal(); else openAuthModal();
-      });
-      right.insertBefore(btn, right.firstChild);
-    } else if (btn.parentNode !== right) {
-      right.insertBefore(btn, right.firstChild);
+    // Pause observation while WE mutate the topbar, otherwise insertBefore /
+    // innerHTML below retrigger the observer that called us → infinite loop / freeze.
+    if (_topbarObserver) _topbarObserver.disconnect();
+    try {
+      var btn = document.getElementById("cloud-acct-btn");
+      if (!btn) {
+        btn = document.createElement("button");
+        btn.id = "cloud-acct-btn";
+        btn.className = "cloud-acct";
+        btn.addEventListener("click", function () {
+          if (S.user) openTripsModal(); else openAuthModal();
+        });
+        right.insertBefore(btn, right.firstChild);
+      } else if (btn.parentNode !== right) {
+        right.insertBefore(btn, right.firstChild);
+      }
+      var html = accountButtonHtml();
+      if (btn.innerHTML !== html) btn.innerHTML = html;
+    } finally {
+      if (_topbarObserver) {
+        var root = document.getElementById("root");
+        if (root) _topbarObserver.observe(root, { childList: true, subtree: true });
+      }
     }
-    btn.innerHTML = accountButtonHtml();
   }
   function watchTopbar() {
     var root = document.getElementById("root");
     if (!root) return;
-    new MutationObserver(function () { mountAccountButton(); }).observe(root, { childList: true, subtree: true });
+    _topbarObserver = new MutationObserver(function () { mountAccountButton(); });
+    _topbarObserver.observe(root, { childList: true, subtree: true });
     mountAccountButton();
   }
 
@@ -354,9 +377,20 @@
       sb.from("trips").select("id,title,updated_at,owner_id").order("updated_at", { ascending: false }),
       sb.from("trip_members").select("trip_id,role").eq("user_id", uid())
     ]).then(function (res) {
-      var trips = (res[0].data) || [];
+      var tripsRes = res[0], membersRes = res[1];
+      // If tables don't exist yet, Supabase returns an error — inform user once.
+      if (tripsRes.error && /does not exist|permission denied/i.test(tripsRes.error.message)) {
+        if (!sessionStorage.getItem("cloud-schema-warned")) {
+          sessionStorage.setItem("cloud-schema-warned", "1");
+          toast("⚠️ Cloud DB not set up — run supabase-schema.sql in Supabase dashboard");
+        }
+        S.currentTripId = null;
+        localStorage.removeItem("cloud-active-trip");
+        return;
+      }
+      var trips = tripsRes.data || [];
       var roleMap = {};
-      ((res[1].data) || []).forEach(function (m) { roleMap[m.trip_id] = m.role; });
+      ((membersRes.data) || []).forEach(function (m) { roleMap[m.trip_id] = m.role; });
       S.trips = trips.map(function (t) {
         return { id: t.id, title: t.title, updated_at: t.updated_at, owner_id: t.owner_id,
                  role: t.owner_id === uid() ? "owner" : (roleMap[t.id] || "viewer") };
@@ -365,7 +399,16 @@
   }
   function openTrip(id) {
     return sb.from("trips").select("*").eq("id", id).single().then(function (r) {
-      if (r.error || !r.data) { toast("Could not open trip"); return; }
+      if (r.error || !r.data) {
+        var msg = r.error ? r.error.message : "Trip not found";
+        // If tables are missing (schema not deployed) the error contains "does not exist"
+        if (r.error && /does not exist|permission denied/i.test(r.error.message)) {
+          toast("Cloud not ready — run supabase-schema.sql first");
+        } else {
+          toast("Could not open trip: " + msg);
+        }
+        return Promise.reject(new Error(msg));
+      }
       var row = r.data;
       S.currentTripId = row.id;
       S.currentRole = row.owner_id === uid() ? "owner" : (roleForTrip(row.id) || "viewer");
@@ -563,6 +606,7 @@
   function doSignout() {
     sb.auth.signOut().then(function () {
       S.user = null; S.profile = null; S.currentTripId = null; S.currentRole = null;
+      S.loggingIn = false;  // reset so the next sign-in triggers afterLogin()
       localStorage.removeItem("cloud-active-trip");
       if (S.channel) { sb.removeChannel(S.channel); S.channel = null; }
       if (window.TripApp) {
@@ -642,21 +686,30 @@
   }
 
   function afterLogin() {
+    // onAuthStateChange + getSession() can both fire on load; run only once.
+    if (S.loggingIn) return Promise.resolve();
+    S.loggingIn = true;
     return loadProfile().then(function () {
       mountAccountButton();
       return loadTrips();
     }).then(function () {
       return maybeAcceptInvite();
     }).then(function () {
-      // reopen last trip if any
-      if (S.currentTripId && !location.search.match(/invite=/)) {
-        openTrip(S.currentTripId);
-      } else if (!S.currentTripId && S.trips.length && !location.search.match(/invite=/)) {
-        // don't auto-open; let the user pick. Offer migration banner instead.
-        maybeOfferImport();
-      } else if (!S.trips.length) {
+      var hasInvite = location.search.match(/invite=/);
+      if (S.currentTripId && !hasInvite) {
+        // If the trip can't be found, clear the stale id so we don't loop.
+        return openTrip(S.currentTripId).catch(function () {
+          S.currentTripId = null;
+          localStorage.removeItem("cloud-active-trip");
+          maybeOfferImport();
+        });
+      } else if (!S.currentTripId && !hasInvite) {
         maybeOfferImport();
       }
+    }).catch(function (err) {
+      console.warn("[cloud] afterLogin error:", err);
+    }).then(function () {
+      S.loggingIn = false;
     });
   }
 
@@ -682,20 +735,25 @@
       if (window.TripApp) { watchTopbar(); } else if (tries++ < 50) { setTimeout(waitApp, 60); } else { watchTopbar(); }
     })();
 
-    // recovery flow (password reset link)
-    if (/type=recovery/.test(location.hash)) { /* session set by detectSessionInUrl */ }
-
-    sb.auth.getSession().then(function (r) {
-      S.user = (r.data && r.data.session && r.data.session.user) || null;
-      if (S.user) afterLogin();
-      else { mountAccountButton(); maybeAcceptInviteGuest(); }
-    });
-
+    // onAuthStateChange fires with INITIAL_SESSION immediately — no need for a
+    // separate getSession() call, which would race and call afterLogin() twice.
     sb.auth.onAuthStateChange(function (event, session) {
       S.user = (session && session.user) || null;
-      if (event === "PASSWORD_RECOVERY") { renderRecover(); return; }
-      if (S.user) { afterLogin(); }
-      else { mountAccountButton(); }
+      // IMPORTANT: never call other supabase methods synchronously inside this
+      // callback — the SDK holds the auth lock here, so a sb.from()/sb.auth call
+      // would wait on a lock that can't release → deadlock → page freeze.
+      // Defer all real work to a fresh task so the lock is released first.
+      if (event === "PASSWORD_RECOVERY") { setTimeout(renderRecover, 0); return; }
+      if (event === "SIGNED_OUT") {
+        S.loggingIn = false;   // reset guard so next sign-in works
+        setTimeout(mountAccountButton, 0);
+        return;
+      }
+      if (S.user) {
+        setTimeout(afterLogin, 0);
+      } else {
+        setTimeout(function () { mountAccountButton(); maybeAcceptInviteGuest(); }, 0);
+      }
     });
   }
   function maybeAcceptInviteGuest() {
