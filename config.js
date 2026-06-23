@@ -15,8 +15,8 @@
  *  See SETUP.md for click-by-click steps.
  * ------------------------------------------------------------------- */
 window.APP_CONFIG = {
-  SUPABASE_URL: "",      // e.g. "https://abcdefgh.supabase.co"
-  SUPABASE_ANON_KEY: "", // e.g. "eyJhbGciOi....(long string)...."
+  SUPABASE_URL: "https://lthtqbmobjijrrrluupm.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0aHRxYm1vYmppanJycmx1dXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyMjgzNDcsImV4cCI6MjA5NzgwNDM0N30.rbIPqkJ2CGk6EpfMcV0ByjLXtXRiTeSquvFBMrg3fcE",
 
   // Where the deployed app lives — used for OAuth / magic-link / reset
   // redirects and for building share links. Trailing slash recommended.
