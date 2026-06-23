@@ -744,6 +744,32 @@ a { color: inherit; text-decoration: none; }
   .pill:hover { transform: none; box-shadow: none; }
   .pill:active { transform: scale(.97); }
 }
+
+/* ---------- Read-only (viewer) mode: hide every edit affordance.
+   The database (RLS) is the real wall; this is the matching UI. ---------- */
+.app.read-only .btn-add,
+.app.read-only .btn-newsection,
+.app.read-only .title-edit,
+.app.read-only .day-actions-row,
+.app.read-only .add-pill-day,
+.app.read-only .add-pill,
+.app.read-only .section-tools,
+.app.read-only .btn-reset,
+.app.read-only .brand-menu-btn,
+.app.read-only .btn-done,
+.app.read-only .day-action-chip,
+.app.read-only .chip[data-action="edit"],
+.app.read-only .chip[data-action="edit-r"],
+.app.read-only .chip[data-action="edit-c"],
+.app.read-only .chip[data-action="edit-loc-a"],
+.app.read-only .chip[data-action="edit-loc-r"],
+.app.read-only .chip[data-action="edit-loc-c"],
+.app.read-only .chip[data-action^="delete"],
+.app.read-only .chip[data-action^="toggle-visited"],
+.app.read-only .trip-cover { display: none !important; }
+.app.read-only .brand-title.editable,
+.app.read-only .brand-sub.editable,
+.app.read-only .ov-cal { pointer-events: none; }
 </style>
 </head>
 <body>
@@ -758,6 +784,13 @@ a { color: inherit; text-decoration: none; }
      ========================================================================= */
   var STORAGE_KEY = "japan-trip-2026";
   var SELECTED_DAY_KEY = "japan-trip-2026:selectedDay";
+
+  // Cloud bridge support: which localStorage key the app writes to.
+  // Stays STORAGE_KEY in guest mode; cloud.js can repoint it to a per-trip
+  // cache key so the original local trip is preserved as a backup.
+  var ACTIVE_KEY = STORAGE_KEY;
+  var __applyingRemote = false;   // true while applying a cloud snapshot (suppresses cloud echo)
+  var __readOnly = false;         // viewer mode → hide edit affordances
 
   var cityIcon = { Tokyo: "🗼", Nagano: "🏔️", Kyoto: "🏯", Fuji: "🗻", Flight: "✈️" };
   var cityClass = { Tokyo: "theme-tokyo", Nagano: "theme-nagano", Kyoto: "theme-kyoto", Fuji: "theme-fuji", Flight: "theme-flight" };
@@ -1187,7 +1220,7 @@ a { color: inherit; text-decoration: none; }
 
   function persist() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      localStorage.setItem(ACTIVE_KEY, JSON.stringify({
         trip: state.trip,
         days: state.days,
         customSections: state.customSections,
@@ -1198,6 +1231,11 @@ a { color: inherit; text-decoration: none; }
       if (state.selectedLocationId) localStorage.setItem(SELECTED_LOCATION_KEY, state.selectedLocationId);
       else localStorage.removeItem(SELECTED_LOCATION_KEY);
     } catch (e) {}
+    // Notify the cloud layer of a local edit (debounced upsert). Skipped while
+    // we are applying a remote snapshot, and a no-op in guest mode.
+    if (!__applyingRemote && window.TripCloud && window.TripCloud.enabled && window.TripCloud.onLocalChange) {
+      window.TripCloud.onLocalChange();
+    }
   }
 
   function getSelectedDay() {
@@ -2020,7 +2058,7 @@ a { color: inherit; text-decoration: none; }
           ? '<div class="trip-cover empty" data-action="open-edit-trip"><span class="cover-icon">＋</span><span>Add trip description</span></div>'
           : '');
     var html =
-      '<div class="app has-toggle">' +
+      '<div class="app has-toggle' + (__readOnly ? ' read-only' : '') + '">' +
         '<header class="topbar">' +
           '<div class="brand">' +
             '<div class="brand-mark" aria-hidden="true">🗾</div>' +
@@ -2559,8 +2597,78 @@ a { color: inherit; text-decoration: none; }
   /* =========================================================================
      Init
      ========================================================================= */
+
+  /* ---------------------------------------------------------------------
+   *  Bridge for cloud.js (no-op in guest mode — cloud.js only calls these
+   *  when Supabase config is present). Keeps the cloud layer fully
+   *  decoupled from the render engine.
+   * ------------------------------------------------------------------- */
+  window.TripApp = {
+    // Return a deep clone of the planner document (what gets stored as JSONB).
+    getContent: function () {
+      return JSON.parse(JSON.stringify({
+        trip: state.trip, days: state.days,
+        customSections: state.customSections, locations: state.locations
+      }));
+    },
+    // Apply a planner document (e.g. opening a cloud trip / remote update).
+    // opts.silent → do not echo back to the cloud as a local change.
+    setContent: function (c, opts) {
+      opts = opts || {};
+      var prev = __applyingRemote;
+      __applyingRemote = opts.silent ? true : prev;
+      try {
+        if (c && typeof c === "object") {
+          state.trip = c.trip ? Object.assign({}, defaultTrip, c.trip) : clone(defaultTrip);
+          state.days = (Array.isArray(c.days) && c.days.length) ? c.days : clone(defaultData);
+          state.customSections = Array.isArray(c.customSections) ? c.customSections : [];
+          state.locations = Array.isArray(c.locations) ? c.locations : [];
+          if (!state.days.some(function (d) { return d.id === state.selectedDayId; })) state.selectedDayId = state.days[0].id;
+          state.selectedLocationId = state.locations.some(function (l) { return l.id === state.selectedLocationId; })
+            ? state.selectedLocationId : (state.locations[0] ? state.locations[0].id : null);
+          state.editing = null; state.adding = null; state.renamingSection = null; state.renamingTitle = null; state.iconPicker = null;
+        }
+        persist();
+        render();
+      } finally { __applyingRemote = prev; }
+    },
+    // True while any edit form / sheet / picker is open (sync edit-guard).
+    isEditing: function () {
+      return !!(state.adding || state.editing || state.iconPicker || state.renamingTitle || state.renamingSection);
+    },
+    render: function () { render(); },
+    setReadOnly: function (v) { __readOnly = !!v; render(); },
+    setActiveKey: function (k) { ACTIVE_KEY = k || STORAGE_KEY; },
+    reloadLocal: function () {
+      var s = loadStored();
+      var prev = __applyingRemote; __applyingRemote = true;
+      try {
+        state.trip = s.trip; state.days = s.days; state.customSections = s.customSections; state.locations = s.locations;
+        if (!state.days.some(function (d) { return d.id === state.selectedDayId; })) state.selectedDayId = state.days[0].id;
+        render();
+      } finally { __applyingRemote = prev; }
+    },
+    newId: function () { return newId(); },
+    // A fresh, minimal valid planner document for a brand-new cloud trip.
+    blankContent: function () {
+      var did = "day-" + newId().slice(0, 8);
+      return {
+        trip: { title: "New trip", headline: "", subtitle: "", cover: "" },
+        days: [{ id: did, date: "", weekday: "", city: "", title: "Day 1", description: "", done: false, infoOnly: false, notes: "", attractions: [], restaurants: [], customItems: {} }],
+        customSections: [], locations: []
+      };
+    }
+  };
+
   render();
 })();
 </script>
+
+<!-- Cloud layer (optional). Loads after the app so window.TripApp exists.
+     If config.js has no keys, cloud.js no-ops and the app stays guest-only.
+     `defer` preserves order: config → supabase SDK → cloud. -->
+<script defer src="config.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="cloud.js"></script>
 </body>
 </html>
