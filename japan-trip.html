@@ -78,6 +78,157 @@ a { color: inherit; text-decoration: none; }
 /* Locations get a distinct teal/cyan theme so they read as a different mode */
 .theme-loc    { --c-bg: #0d9488; --c-bg-2: #5eead4; --c-soft: #effaf6; --c-accent: #0d9488; }
 
+/* ---------- Sheet-style modal (Apple-style bottom sheet on mobile, centered on desktop) ---------- */
+.sheet-scrim {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(11, 18, 32, .42);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: scrim-in .25s ease both;
+  padding: 0;
+}
+@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
+.sheet {
+  background: var(--bg-card);
+  width: 100%; max-width: 560px;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -20px 60px -8px rgba(0,0,0,.4);
+  padding: 16px 20px calc(28px + env(safe-area-inset-bottom));
+  animation: sheet-in .32s cubic-bezier(.32,.72,.34,1) both;
+  max-height: 86vh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@keyframes sheet-in { from { transform: translateY(40px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+@media (min-width: 720px) {
+  .sheet-scrim { align-items: center; padding: 24px; }
+  .sheet { border-radius: 22px; max-height: 78vh; }
+}
+.sheet-handle {
+  width: 38px; height: 5px; border-radius: 999px;
+  background: #d6dae3; margin: 4px auto 14px;
+}
+.sheet-header { display: flex; align-items: center; justify-content: space-between; margin: 0 0 10px; }
+.sheet-title { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.015em; }
+.sheet-close {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--border-soft); color: var(--text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: background .15s, transform .1s;
+}
+.sheet-close:hover { background: #e6eaf2; color: var(--text); }
+.sheet-close:active { transform: scale(.94); }
+
+/* ---------- Icon picker grid ---------- */
+.icon-picker-group { margin-bottom: 14px; }
+.icon-picker-group h5 { margin: 0 0 6px; font-size: 11px; font-weight: 700; color: var(--text-soft); letter-spacing: .12em; text-transform: uppercase; }
+.icon-picker-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 6px;
+}
+.icon-cell {
+  height: 48px; border-radius: 12px;
+  background: var(--bg);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 22px; line-height: 1;
+  transition: background .15s, transform .1s, box-shadow .15s;
+  border: 1.5px solid transparent;
+}
+.icon-cell:hover { background: var(--c-soft); }
+.icon-cell:active { transform: scale(.94); }
+.icon-cell.is-current { border-color: var(--c-accent); background: var(--c-soft); box-shadow: 0 4px 10px -4px rgba(0,0,0,.18); }
+.icon-custom-row { margin-top: 10px; display: flex; gap: 8px; align-items: center; }
+.icon-custom-row .input { flex: 1; }
+
+/* ---------- Sheet form (Edit day, Edit trip, Edit location) ---------- */
+.sheet-form { display: grid; gap: 10px; }
+.sheet-form .field { display: grid; gap: 4px; }
+.sheet-form .field label { font-size: 11px; font-weight: 700; color: var(--text-soft); letter-spacing: .08em; text-transform: uppercase; padding-left: 2px; }
+.sheet-form .icon-pick-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 14px; font-weight: 600;
+  transition: background .15s, border-color .15s;
+}
+.sheet-form .icon-pick-btn:hover { background: var(--border-soft); border-color: #d6dae3; }
+.sheet-form .icon-pick-btn .icon-emoji-lg { font-size: 24px; }
+.sheet-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.sheet-actions .btn-primary, .sheet-actions .btn-secondary { padding: 11px 18px; }
+.danger-zone {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.btn-danger {
+  padding: 10px 16px; border-radius: var(--r-pill);
+  background: #fee2e2; color: #991b1b;
+  font-size: 13px; font-weight: 700;
+  transition: background .15s, transform .1s;
+}
+.btn-danger:hover { background: #fecaca; }
+.btn-danger:active { transform: scale(.97); }
+
+/* ---------- Trip-identity (replaces fixed Japan 2026 brand text) ---------- */
+.brand-text { cursor: default; }
+.brand-title.editable { cursor: pointer; transition: color .15s; }
+.brand-title.editable:hover { color: var(--c-bg, var(--text)); }
+.brand-sub.editable { cursor: pointer; }
+.brand-menu-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--bg-card); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--text-muted);
+  transition: background .15s, transform .1s, box-shadow .15s;
+  margin-right: 6px;
+}
+.brand-menu-btn:hover { background: var(--border-soft); }
+.brand-menu-btn:active { transform: scale(.94); }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+/* ---------- Day actions row (small inline action group in the day overview) ---------- */
+.day-actions-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 12px;
+}
+.day-action-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--r-pill);
+  background: var(--bg);
+  font-size: 12.5px; font-weight: 700; color: var(--text-muted);
+  border: 1px solid var(--border);
+  transition: background .15s, transform .1s, color .15s, border-color .15s;
+}
+.day-action-chip:hover { background: var(--c-soft); color: var(--c-accent); border-color: var(--c-accent); }
+.day-action-chip:active { transform: scale(.96); }
+.day-action-chip.danger:hover { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+/* ---------- Trip-cover band — sits above pills, optional ---------- */
+.trip-cover {
+  max-width: 980px; margin: 14px auto 0; padding: 0 16px;
+  font-size: 14px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.trip-cover:hover { color: var(--text); }
+.trip-cover .cover-icon { color: var(--text-soft); }
+.trip-cover.empty { font-style: italic; }
+@media (min-width: 720px) {
+  .trip-cover { padding: 0 32px; }
+}
+
+/* ---------- Add Day pill (in days mode) ---------- */
+.pill.add-pill-day {
+  width: 76px;
+  background: transparent;
+  border: 1.5px dashed #c8cdda;
+  color: var(--text-muted);
+}
+.pill.add-pill-day .num-label { color: var(--text-muted); }
+.pill.add-pill-day .num-big { color: var(--text-muted); font-weight: 700; font-size: 26px; }
+.pill.add-pill-day:hover { background: var(--bg-card); border-color: var(--c-accent, #ef4444); color: var(--c-accent, #ef4444); }
+.pill.add-pill-day:hover .num-label,
+.pill.add-pill-day:hover .num-big { color: var(--c-accent, #ef4444); }
+
 /* =========================================================================
    App shell
    ========================================================================= */
@@ -270,11 +421,15 @@ a { color: inherit; text-decoration: none; }
   color: var(--c-bg); text-transform: uppercase;
 }
 .overview .ov-cal {
-  width: 36px; height: 36px; border-radius: 12px;
+  width: 44px; height: 44px; border-radius: 14px;
   background: var(--c-soft); color: var(--c-bg);
-  display: grid; place-items: center; font-size: 16px;
+  display: grid; place-items: center; font-size: 22px;
   flex-shrink: 0;
+  transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+  cursor: pointer;
 }
+.overview button.ov-cal:hover { background: var(--bg-card); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.overview button.ov-cal:active { transform: scale(.94); }
 .overview h2 {
   margin: 12px 0 6px;
   font-size: 26px; line-height: 1.15; font-weight: 800;
@@ -606,6 +761,16 @@ a { color: inherit; text-decoration: none; }
 
   var cityIcon = { Tokyo: "🗼", Nagano: "🏔️", Kyoto: "🏯", Fuji: "🗻", Flight: "✈️" };
   var cityClass = { Tokyo: "theme-tokyo", Nagano: "theme-nagano", Kyoto: "theme-kyoto", Fuji: "theme-fuji", Flight: "theme-flight" };
+
+  /* Icon palette for the picker — grouped for navigation */
+  var ICON_PALETTE = [
+    { label: "Travel",   icons: ["✈️","🚄","🚂","🚆","🚅","🚌","🚗","🚕","🚖","⛴️","🛳️","🛩️","🚲","🛵","🧳","🛂","🏨","🗺️"] },
+    { label: "Places",   icons: ["📍","🗼","🏯","⛩️","🏛️","🏰","🏟️","🏖️","🏝️","🏞️","🗻","🏔️","🌋","🏙️","🌉","🗿","🌃","🎡"] },
+    { label: "Food",     icons: ["🍱","🍣","🍜","🍙","🍢","🍵","🍶","☕","🍺","🍷","🥟","🍤","🍰","🍡","🍨","🥢","🍴","🥟"] },
+    { label: "Activity", icons: ["🎢","🎡","🎮","🎯","🎤","🎸","🎨","🚴","🧘","🚶","🧗","🎎","🎭","🛍️","♨️","🛁","🏊","⛷️"] },
+    { label: "Nature",   icons: ["🌸","🌺","🌳","🌲","🌊","🌅","🌄","🌠","☀️","🌙","🍁","🍃","🌿","🐒","🦌","🐠","🦋","🌷"] },
+    { label: "Custom",   icons: ["⭐","❤️","✅","📝","💡","📷","🎁","💰","💴","🎌","🇯🇵","🌟","🔖","📌","🏆","💎","🥇","🎉"] }
+  ];
 
   /* =========================================================================
      Default itinerary (extracted from Plan_v5.docx daily section, May 13–31)
@@ -969,15 +1134,25 @@ a { color: inherit; text-decoration: none; }
   var MODE_KEY = "japan-trip-2026:mode";
   var SELECTED_LOCATION_KEY = "japan-trip-2026:selectedLocation";
 
+  var defaultTrip = {
+    title: "Japan 2026",
+    headline: "Our Japan adventure",
+    subtitle: "13 May → 31 May",
+    cover: "Tokyo → Nagano → Kyoto → Fuji → Tokyo"
+  };
+
   function loadStored() {
-    var fallback = { days: clone(defaultData), customSections: [], locations: [] };
+    var fallback = { trip: clone(defaultTrip), days: clone(defaultData), customSections: [], locations: [] };
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return fallback;
       var parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return { days: parsed, customSections: [], locations: [] };
+      // Legacy shape 1: bare array of days
+      if (Array.isArray(parsed) && parsed.length > 0) return { trip: clone(defaultTrip), days: parsed, customSections: [], locations: [] };
+      // Legacy + new shape: object with days
       if (parsed && Array.isArray(parsed.days) && parsed.days.length > 0) {
         return {
+          trip: parsed.trip && typeof parsed.trip === "object" ? Object.assign({}, defaultTrip, parsed.trip) : clone(defaultTrip),
           days: parsed.days,
           customSections: Array.isArray(parsed.customSections) ? parsed.customSections : [],
           locations: Array.isArray(parsed.locations) ? parsed.locations : []
@@ -996,21 +1171,24 @@ a { color: inherit; text-decoration: none; }
     var savedMode = localStorage.getItem(MODE_KEY);
     return {
       mode: (savedMode === "locations" ? "locations" : "days"),
+      trip: s.trip,
       days: s.days,
       customSections: s.customSections,
       locations: s.locations,
       selectedDayId: localStorage.getItem(SELECTED_DAY_KEY) || s.days[0].id,
       selectedLocationId: localStorage.getItem(SELECTED_LOCATION_KEY) || (s.locations[0] ? s.locations[0].id : null),
       editing: null,            // item id currently in edit mode (within a section)
-      adding: null,             // section key for add form: "attractions" | "restaurants" | section id | "__new_section__" | "__new_location__"
+      adding: null,             // section key for add form: "attractions" | "restaurants" | section id | "__new_section__" | "__new_location__" | "__edit_trip__" | "__edit_day__"
       renamingSection: null,    // section id being renamed
-      renamingTitle: null       // "day" | "location" — inline rename of the current title
+      renamingTitle: null,      // "day" | "location" | "trip-title" | "trip-sub" — inline rename
+      iconPicker: null          // { target: "day"|"section:<id>"|"item:<kind>:<id>"|..., currentIcon: string } or null
     };
   })();
 
   function persist() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        trip: state.trip,
         days: state.days,
         customSections: state.customSections,
         locations: state.locations
@@ -1069,30 +1247,40 @@ a { color: inherit; text-decoration: none; }
 
   function renderPills() {
     var parts = state.days.map(function (d, i) {
-      var icon = cityIcon[d.city] || "•";
+      var icon = d.icon || cityIcon[d.city] || "•";
       var theme = cityClass[d.city] || "";
       var active = d.id === state.selectedDayId;
+      var dateShort = d.date ? d.date.replace(/^\w+\s*/, "") : "";
       return (
         '<button class="pill ' + theme + (active ? " is-active" : "") + (d.done ? " is-done" : "") +
         '" data-action="select-day" data-day-id="' + esc(d.id) + '" aria-label="Day ' + (i + 1) + ' — ' + esc(d.date) + ' ' + esc(d.city) + (d.done ? ", done" : "") + '">' +
           '<div class="num-label">Day</div>' +
           '<div class="num-big">' + (i + 1) + '</div>' +
-          '<div class="pill-meta"><span class="icon">' + icon + '</span><span>' + esc(d.date.replace(/^May\s*/, "")) + '</span></div>' +
+          '<div class="pill-meta"><span class="icon">' + icon + '</span><span>' + esc(dateShort) + '</span></div>' +
           '<span class="pill-check" aria-hidden="true">✓</span>' +
         '</button>'
       );
     }).join("");
-    return '<div class="pills" id="pills">' + parts + '</div>';
+    var addPill =
+      '<button class="pill add-pill-day" data-action="add-day" aria-label="Add a new day">' +
+        '<div class="num-label">add</div>' +
+        '<div class="num-big">＋</div>' +
+      '</button>';
+    return '<div class="pills" id="pills">' + parts + addPill + '</div>';
   }
 
   function renderHero(day, index) {
     var theme = cityClass[day.city] || "theme-flight";
     var doneOn = day.done ? "is-done" : "";
     var doneLabel = day.done ? "✓ Day done" : "Mark day done";
-    var cityLine = day.city === "Flight" ? "In transit" : esc(day.city);
-    var monthLabel = day.date.replace(/(\w+) (\d+)/, "$1") .toUpperCase();   // "MAY"
-    var dayNum = (day.date.match(/\d+/) || [""])[0];
-    var label = monthLabel + " · " + esc((day.city || "").toUpperCase()) + " " + dayNum;
+    var cityLine = day.city === "Flight" ? "In transit" : esc(day.city || "");
+    // Caps label: prefer date+city if possible; gracefully degrade
+    var monthLabel = day.date ? day.date.replace(/(\w+) (\d+)/, "$1").toUpperCase() : "";
+    var dayNum = (day.date && day.date.match(/\d+/)) ? day.date.match(/\d+/)[0] : "";
+    var labelParts = [];
+    if (monthLabel) labelParts.push(monthLabel);
+    if (day.city) labelParts.push(esc((day.city || "").toUpperCase()) + (dayNum ? " " + dayNum : ""));
+    var label = labelParts.join(" · ") || "DAY " + (index + 1);
     var titleBlock = state.renamingTitle === "day"
       ? ('<form class="title-edit-form" data-form="rename-day-title" autocomplete="off">' +
             '<input class="input" name="title" required value="' + esc(day.title) + '" autofocus>' +
@@ -1100,18 +1288,33 @@ a { color: inherit; text-decoration: none; }
             '<button type="button" class="btn-secondary" data-action="cancel-rename-title">Cancel</button>' +
          '</form>')
       : ('<h2>' + esc(day.title) + '<button class="title-edit" data-action="rename-day-title" title="Rename day" aria-label="Rename day">✏️</button></h2>');
+    var descBlock = day.description
+      ? '<p class="ov-sub" style="margin-top:8px;">' + esc(day.description) + '</p>'
+      : '';
+    var iconNow = day.icon || cityIcon[day.city] || "📅";
+    var canMoveUp = index > 0;
+    var canMoveDown = index < state.days.length - 1;
+    var canDelete = state.days.length > 1;
     return (
       '<section class="overview ' + theme + '">' +
         '<div class="ov-row">' +
           '<div style="flex:1; min-width:0;">' +
             '<div class="ov-label">' + label + '</div>' +
             titleBlock +
-            '<p class="ov-sub">Day ' + (index + 1) + ' of ' + state.days.length + ' · ' + esc(day.weekday) + ' · ' + cityLine + '</p>' +
+            '<p class="ov-sub">Day ' + (index + 1) + ' of ' + state.days.length + ' · ' + esc(day.weekday || "") + (cityLine ? ' · ' + cityLine : "") + '</p>' +
+            descBlock +
           '</div>' +
-          '<div class="ov-cal" aria-hidden="true">📅</div>' +
+          '<button class="ov-cal" data-action="open-icon-picker" data-target="day" aria-label="Change day icon" title="Change icon">' + iconNow + '</button>' +
         '</div>' +
         '<div class="ov-actions">' +
           '<button class="btn-done ' + doneOn + '" data-action="toggle-done">' + doneLabel + '</button>' +
+          '<button class="day-action-chip" data-action="open-edit-day">⚙️ Edit details</button>' +
+        '</div>' +
+        '<div class="day-actions-row">' +
+          '<button class="day-action-chip" data-action="duplicate-day">⧉ Duplicate</button>' +
+          (canMoveUp ? '<button class="day-action-chip" data-action="move-day-up">↑ Move up</button>' : '') +
+          (canMoveDown ? '<button class="day-action-chip" data-action="move-day-down">↓ Move down</button>' : '') +
+          (canDelete ? '<button class="day-action-chip danger" data-action="delete-day">🗑️ Delete day</button>' : '') +
         '</div>' +
       '</section>'
     );
@@ -1676,6 +1879,113 @@ a { color: inherit; text-decoration: none; }
     );
   }
 
+  /* =========================================================================
+     Sheet modals (icon picker, edit trip, edit day)
+     ========================================================================= */
+  function renderIconPickerSheet() {
+    if (!state.iconPicker) return "";
+    var groupsHtml = ICON_PALETTE.map(function (g) {
+      return (
+        '<div class="icon-picker-group">' +
+          '<h5>' + esc(g.label) + '</h5>' +
+          '<div class="icon-picker-grid">' +
+            g.icons.map(function (ic) {
+              var cur = ic === state.iconPicker.currentIcon ? " is-current" : "";
+              return '<button class="icon-cell' + cur + '" data-action="pick-icon" data-icon="' + esc(ic) + '" aria-label="Set icon ' + esc(ic) + '">' + ic + '</button>';
+            }).join("") +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+    return (
+      '<div class="sheet-scrim" data-action="close-sheet">' +
+        '<div class="sheet">' +
+          '<div class="sheet-handle" aria-hidden="true"></div>' +
+          '<div class="sheet-header">' +
+            '<h3 class="sheet-title">Choose icon</h3>' +
+            '<button class="sheet-close" data-action="close-sheet" aria-label="Close">✕</button>' +
+          '</div>' +
+          groupsHtml +
+          '<form data-form="custom-icon" class="icon-custom-row">' +
+            '<input class="input" name="icon" maxlength="6" placeholder="Or paste any emoji (e.g. 🍓)" value="' + esc(state.iconPicker.currentIcon || "") + '" autocomplete="off">' +
+            '<button type="submit" class="btn-primary">Use</button>' +
+            '<button type="button" class="btn-secondary" data-action="clear-icon">Clear</button>' +
+          '</form>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderEditTripSheet() {
+    if (state.adding !== "__edit_trip__") return "";
+    var t = state.trip || defaultTrip;
+    return (
+      '<div class="sheet-scrim" data-action="close-sheet">' +
+        '<div class="sheet">' +
+          '<div class="sheet-handle" aria-hidden="true"></div>' +
+          '<div class="sheet-header">' +
+            '<h3 class="sheet-title">Trip details</h3>' +
+            '<button class="sheet-close" data-action="cancel-form" aria-label="Close">✕</button>' +
+          '</div>' +
+          '<form class="sheet-form" data-form="edit-trip" autocomplete="off">' +
+            '<div class="field"><label>Trip title</label><input class="input" name="title" required maxlength="100" value="' + esc(t.title || "") + '" placeholder="e.g. Japan Adventure 2026"></div>' +
+            '<div class="field"><label>Headline</label><input class="input" name="headline" maxlength="120" value="' + esc(t.headline || "") + '" placeholder="e.g. Our family Japan tour"></div>' +
+            '<div class="field"><label>Subtitle / dates</label><input class="input" name="subtitle" maxlength="80" value="' + esc(t.subtitle || "") + '" placeholder="e.g. 13 May → 31 May"></div>' +
+            '<div class="field"><label>Cover description</label><textarea class="textarea" name="cover" rows="3" placeholder="A short summary, e.g. Tokyo → Kyoto → Fuji">' + esc(t.cover || "") + '</textarea></div>' +
+            '<div class="sheet-actions">' +
+              '<button type="submit" class="btn-primary">Save</button>' +
+              '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderEditDaySheet() {
+    if (state.adding !== "__edit_day__") return "";
+    var day = getSelectedDay();
+    if (!day) return "";
+    var idx = getSelectedDayIndex();
+    var iconNow = day.icon || cityIcon[day.city] || "📍";
+    return (
+      '<div class="sheet-scrim" data-action="close-sheet">' +
+        '<div class="sheet">' +
+          '<div class="sheet-handle" aria-hidden="true"></div>' +
+          '<div class="sheet-header">' +
+            '<h3 class="sheet-title">Edit day ' + (idx + 1) + '</h3>' +
+            '<button class="sheet-close" data-action="cancel-form" aria-label="Close">✕</button>' +
+          '</div>' +
+          '<form class="sheet-form" data-form="edit-day" autocomplete="off">' +
+            '<div class="field"><label>Title</label><input class="input" name="title" required maxlength="120" value="' + esc(day.title || "") + '" placeholder="e.g. Arrival in Tokyo"></div>' +
+            '<div class="field"><label>Date</label><input class="input" name="date" maxlength="40" value="' + esc(day.date || "") + '" placeholder="e.g. May 14"></div>' +
+            '<div class="field"><label>Weekday</label><input class="input" name="weekday" maxlength="20" value="' + esc(day.weekday || "") + '" placeholder="e.g. Thursday"></div>' +
+            '<div class="field"><label>City / area</label><input class="input" name="city" maxlength="40" value="' + esc(day.city || "") + '" placeholder="e.g. Tokyo, Kyoto, Custom"></div>' +
+            '<div class="field"><label>Description (optional)</label><textarea class="textarea" name="description" rows="3" placeholder="A short note for this day">' + esc(day.description || "") + '</textarea></div>' +
+            '<div class="field"><label>Icon</label>' +
+              '<button type="button" class="icon-pick-btn" data-action="open-icon-picker" data-target="day"><span class="icon-emoji-lg">' + iconNow + '</span><span>Change icon</span></button>' +
+            '</div>' +
+            '<div class="sheet-actions">' +
+              '<button type="submit" class="btn-primary">Save</button>' +
+              '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+            '</div>' +
+            '<div class="danger-zone">' +
+              '<button type="button" class="day-action-chip" data-action="duplicate-day">⧉ Duplicate</button>' +
+              '<button type="button" class="day-action-chip" data-action="move-day-up" ' + (idx === 0 ? "disabled" : "") + '>↑ Move up</button>' +
+              '<button type="button" class="day-action-chip" data-action="move-day-down" ' + (idx === state.days.length - 1 ? "disabled" : "") + '>↓ Move down</button>' +
+              '<button type="button" class="btn-danger" data-action="delete-day" ' + (state.days.length <= 1 ? "disabled" : "") + '>🗑️ Delete day</button>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderItemIconSheet() {
+    // Reuses the icon picker; only the icon picker scrim itself shows when state.iconPicker is set.
+    return "";
+  }
+
   function renderModeToggle() {
     var dActive = state.mode === "days" ? " is-active mode-days" : "";
     var lActive = state.mode === "locations" ? " is-active mode-locations" : "";
@@ -1703,20 +2013,33 @@ a { color: inherit; text-decoration: none; }
 
   function render() {
     var body = state.mode === "locations" ? renderLocationsView() : renderDaysView();
+    var t = state.trip || defaultTrip;
+    var coverBand = (state.mode === "days" && t.cover)
+      ? '<div class="trip-cover" data-action="open-edit-trip" title="Edit trip details"><span class="cover-icon">🗒️</span><span>' + esc(t.cover) + '</span></div>'
+      : (state.mode === "days"
+          ? '<div class="trip-cover empty" data-action="open-edit-trip"><span class="cover-icon">＋</span><span>Add trip description</span></div>'
+          : '');
     var html =
       '<div class="app has-toggle">' +
         '<header class="topbar">' +
           '<div class="brand">' +
             '<div class="brand-mark" aria-hidden="true">🗾</div>' +
             '<div class="brand-text">' +
-              '<div class="brand-title">Japan 2026</div>' +
-              '<div class="brand-sub">13 May → 31 May</div>' +
+              '<div class="brand-title editable" data-action="open-edit-trip" title="Edit trip details">' + esc(t.title || "Trip") + '</div>' +
+              '<div class="brand-sub editable" data-action="open-edit-trip">' + esc(t.subtitle || "") + '</div>' +
             '</div>' +
           '</div>' +
-          '<button class="btn-reset" data-action="reset">Reset</button>' +
+          '<div class="topbar-right">' +
+            '<button class="brand-menu-btn" data-action="open-edit-trip" title="Edit trip details" aria-label="Edit trip details">✏️</button>' +
+            '<button class="btn-reset" data-action="reset">Reset</button>' +
+          '</div>' +
         '</header>' +
         renderModeToggle() +
+        coverBand +
         body +
+        renderEditTripSheet() +
+        renderEditDaySheet() +
+        renderIconPickerSheet() +
       '</div>';
     document.getElementById("root").innerHTML = html;
 
@@ -1932,11 +2255,130 @@ a { color: inherit; text-decoration: none; }
       return;
     }
 
+    /* Trip-level edit */
+    if (action === "open-edit-trip") { state.adding = "__edit_trip__"; state.editing = null; state.renamingTitle = null; state.iconPicker = null; render(); return; }
+
+    /* Day-level edit & lifecycle */
+    if (action === "open-edit-day") { state.adding = "__edit_day__"; state.editing = null; state.renamingTitle = null; state.iconPicker = null; render(); return; }
+    if (action === "add-day") {
+      var nd = {
+        id: "day-" + newId().slice(0, 8),
+        date: "", weekday: "", city: "", title: "New day", description: "",
+        done: false, infoOnly: false, notes: "",
+        attractions: [], restaurants: [], customItems: {}
+      };
+      state.days.push(nd);
+      state.selectedDayId = nd.id;
+      state.adding = "__edit_day__";        // open editor so the user can fill it in
+      persist(); render();
+      return;
+    }
+    if (action === "duplicate-day") {
+      var sIdx = getSelectedDayIndex();
+      var src = state.days[sIdx];
+      var dup = JSON.parse(JSON.stringify(src));
+      dup.id = "day-" + newId().slice(0, 8);
+      dup.title = src.title + " (copy)";
+      dup.done = false;
+      // Re-id all nested items to avoid id collisions
+      (dup.attractions || []).forEach(function (x) { x.id = newId(); });
+      (dup.restaurants || []).forEach(function (x) { x.id = newId(); });
+      if (dup.customItems) {
+        Object.keys(dup.customItems).forEach(function (k) {
+          (dup.customItems[k] || []).forEach(function (x) { x.id = newId(); });
+        });
+      }
+      state.days.splice(sIdx + 1, 0, dup);
+      state.selectedDayId = dup.id;
+      state.adding = null; persist(); render();
+      return;
+    }
+    if (action === "move-day-up") {
+      var mUp = getSelectedDayIndex();
+      if (mUp > 0) {
+        var swap = state.days[mUp - 1];
+        state.days[mUp - 1] = state.days[mUp];
+        state.days[mUp] = swap;
+        persist(); render();
+      }
+      return;
+    }
+    if (action === "move-day-down") {
+      var mDn = getSelectedDayIndex();
+      if (mDn < state.days.length - 1) {
+        var swap2 = state.days[mDn + 1];
+        state.days[mDn + 1] = state.days[mDn];
+        state.days[mDn] = swap2;
+        persist(); render();
+      }
+      return;
+    }
+    if (action === "delete-day") {
+      if (state.days.length <= 1) return;
+      if (confirm('Delete this day? All places and restaurants inside it will be lost.')) {
+        var dIdx = getSelectedDayIndex();
+        state.days.splice(dIdx, 1);
+        var nextIdx = Math.min(dIdx, state.days.length - 1);
+        state.selectedDayId = state.days[nextIdx].id;
+        state.adding = null; state.editing = null; state.renamingTitle = null;
+        persist(); render();
+      }
+      return;
+    }
+
+    /* Icon picker */
+    if (action === "open-icon-picker") {
+      var target = t.dataset.target;     // "day" | "section:<id>" | "item:<kind>:<id>" | ...
+      var currentIcon = "";
+      if (target === "day") {
+        var d0 = getSelectedDay();
+        currentIcon = (d0 && d0.icon) || cityIcon[d0 && d0.city] || "";
+      }
+      state.iconPicker = { target: target, currentIcon: currentIcon };
+      render();
+      return;
+    }
+    if (action === "close-sheet") {
+      // Only close if the user clicked DIRECTLY on the scrim or the close button,
+      // not if the click bubbled up from inner sheet content.
+      if (e.target === t) {
+        state.iconPicker = null;
+        state.adding = null; state.editing = null; state.renamingTitle = null;
+        render();
+      }
+      return;
+    }
+    if (action === "pick-icon") {
+      if (!state.iconPicker) return;
+      var chosen = t.dataset.icon;
+      applyIconChoice(state.iconPicker.target, chosen);
+      state.iconPicker = null;
+      // If we were in the middle of editing a day, keep that sheet open
+      // (already handled — applyIconChoice doesn't change state.adding)
+      render();
+      return;
+    }
+    if (action === "clear-icon") {
+      if (!state.iconPicker) return;
+      applyIconChoice(state.iconPicker.target, "");
+      state.iconPicker = null; render();
+      return;
+    }
+
     if (action === "cancel-form") {
-      state.adding = null; state.editing = null; state.renamingTitle = null; render();
+      state.adding = null; state.editing = null; state.renamingTitle = null; state.iconPicker = null; render();
       return;
     }
   });
+
+  function applyIconChoice(target, icon) {
+    if (!target) return;
+    if (target === "day") {
+      updateSelectedDay(function (d) { d.icon = icon; });
+      return;
+    }
+    // Future: section:<id>, item:<kind>:<id>
+  }
 
   document.addEventListener("submit", function (e) {
     var form = e.target.closest("form[data-form]");
@@ -2060,6 +2502,41 @@ a { color: inherit; text-decoration: none; }
       state.adding = null; persist(); render();
       return;
     }
+    /* Edit trip identity */
+    if (kind === "edit-trip") {
+      state.trip = Object.assign({}, state.trip || defaultTrip, {
+        title: data.title || (state.trip ? state.trip.title : defaultTrip.title),
+        headline: data.headline || "",
+        subtitle: data.subtitle || "",
+        cover: data.cover || ""
+      });
+      state.adding = null; persist(); render();
+      return;
+    }
+
+    /* Edit day (all fields at once) */
+    if (kind === "edit-day") {
+      if (!data.title) return;
+      updateSelectedDay(function (d) {
+        d.title = data.title;
+        d.date = data.date;
+        d.weekday = data.weekday;
+        d.city = data.city;
+        d.description = data.description;
+      });
+      state.adding = null;
+      return;
+    }
+
+    /* Custom icon (typed in icon picker) */
+    if (kind === "custom-icon") {
+      if (!state.iconPicker) return;
+      var typed = (data.icon || "").trim();
+      applyIconChoice(state.iconPicker.target, typed);
+      state.iconPicker = null; render();
+      return;
+    }
+
     /* New location */
     if (kind === "new-location") {
       if (!data.name) return;
