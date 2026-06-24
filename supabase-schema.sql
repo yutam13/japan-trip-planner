@@ -166,7 +166,8 @@ create trigger on_trip_created
 
 -- Keep updated_at fresh on content writes.
 create or replace function public.touch_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = '' as $$
 begin
   new.updated_at = now();
   return new;
@@ -241,5 +242,24 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.trip_members;
 exception when duplicate_object then null; end $$;
+
+-- ---------------------------------------------------------------------
+--  Security hardening (matches Supabase database-linter recommendations)
+--  Supabase grants EXECUTE to anon/authenticated by default, so we revoke
+--  explicitly from those roles. RLS helper functions (is_trip_member /
+--  trip_role_of) are intentionally left executable because the policies
+--  above invoke them in the context of the querying role.
+-- ---------------------------------------------------------------------
+
+-- Trigger functions are never called via REST. Revoking EXECUTE does not
+-- affect trigger firing (Postgres skips the EXECUTE check for triggers).
+revoke execute on function public.handle_new_user()  from anon, authenticated;
+revoke execute on function public.handle_new_trip()  from anon, authenticated;
+revoke execute on function public.touch_updated_at() from anon, authenticated;
+
+-- Sharing RPCs: signed-in users only (no anonymous email enumeration or
+-- anonymous invite acceptance).
+revoke execute on function public.find_profile_by_email(text) from anon;
+revoke execute on function public.accept_invite(text)         from anon;
 
 -- Done.
