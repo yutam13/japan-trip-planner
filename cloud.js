@@ -57,7 +57,8 @@
     currentRole: null,
     channel: null,
     saveTimer: null,
-    pendingRemote: null,
+    pendingRemoteRow: null,   // buffered remote row to apply once editing stops
+    knownUpdatedAt: null,     // updated_at of the content currently in the app (version guard)
     modal: null,        // which modal is open: 'auth'|'trips'|'share'|'recover'|null
     loggingIn: false    // guard: prevent duplicate afterLogin() calls
   };
@@ -417,6 +418,7 @@
       // local (guest) trip under "japan-trip-2026" is preserved as a backup.
       window.TripApp && window.TripApp.setActiveKey && window.TripApp.setActiveKey("cloud-trip:" + row.id);
       applyRemoteContent(row.content);
+      S.knownUpdatedAt = row.updated_at || null;   // remember the version we just loaded
       window.TripApp && window.TripApp.setReadOnly(!canEdit());
       subscribeRealtime(row.id);
       closeModal();
@@ -547,28 +549,69 @@
     if (!S.currentTripId || !canEdit() || !window.TripApp) return;
     var content = window.TripApp.getContent();
     var title = (content.trip && content.trip.title) || "Untitled trip";
+    // Return updated_at so we can advance our local version and recognise the
+    // realtime echo of our own write.
     sb.from("trips").update({ content: content, title: title, updated_by: uid() }).eq("id", S.currentTripId)
-      .then(function (r) { if (r.error) console.warn("[cloud] push", r.error); });
+      .select("updated_at").single()
+      .then(function (r) {
+        if (r.error) { console.warn("[cloud] push", r.error); return; }
+        if (r.data && r.data.updated_at) S.knownUpdatedAt = r.data.updated_at;
+      });
+  }
+  function contentEquals(a, b) {
+    try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; }
+  }
+  // Decide what to do with an incoming trip row (from realtime OR a refetch).
+  // Echo detection is by VERSION (updated_at) + CONTENT — never by updated_by,
+  // because the same user on two devices shares one uid, and a uid filter would
+  // hide your other device's edits (the cross-device drift bug).
+  function applyRemoteRow(row, note) {
+    if (!row || !row.content) return;
+    // Older-or-equal version than what we already hold → stale or our own echo.
+    if (row.updated_at && S.knownUpdatedAt && row.updated_at <= S.knownUpdatedAt) return;
+    var current = window.TripApp ? window.TripApp.getContent() : null;
+    if (current && contentEquals(current, row.content)) {     // identical → nothing to show
+      if (row.updated_at) S.knownUpdatedAt = row.updated_at;  // still advance the version
+      return;
+    }
+    // Don't clobber an open editor — buffer and apply when it closes.
+    if (window.TripApp && window.TripApp.isEditing()) { S.pendingRemoteRow = row; return; }
+    applyRemoteContent(row.content);
+    if (row.updated_at) S.knownUpdatedAt = row.updated_at;
+    if (note) toast(note);
+  }
+  // Pull the authoritative latest row (used on reconnect / tab-resume / focus,
+  // when realtime may have missed events while the tab was suspended).
+  function refetchCurrent() {
+    if (!S.currentTripId) return;
+    if (window.TripApp && window.TripApp.isEditing()) return;
+    sb.from("trips").select("content,updated_at").eq("id", S.currentTripId).single()
+      .then(function (r) { if (!r.error && r.data) applyRemoteRow(r.data, null); })
+      .catch(function () {});
   }
   function subscribeRealtime(id) {
     if (S.channel) { sb.removeChannel(S.channel); S.channel = null; }
     S.channel = sb.channel("trip:" + id)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "trips", filter: "id=eq." + id }, function (payload) {
-        var row = payload.new;
-        if (!row || row.updated_by === uid()) return;       // ignore my own echoes
-        if (window.TripApp && window.TripApp.isEditing()) { S.pendingRemote = row.content; return; }
-        applyRemoteContent(row.content);
-        toast("Updated by a collaborator");
+        if (payload && payload.new) applyRemoteRow(payload.new, "Trip updated");
       })
-      .subscribe();
+      .subscribe(function (status) {
+        // After a (re)subscribe, reconcile against the server in case events
+        // were dropped while the connection/tab was asleep.
+        if (status === "SUBSCRIBED") refetchCurrent();
+      });
   }
-  // reconcile buffered remote change once the user closes their editor
+  // reconcile a buffered remote change once the user closes their editor
   setInterval(function () {
-    if (S.pendingRemote && window.TripApp && !window.TripApp.isEditing()) {
-      var c = S.pendingRemote; S.pendingRemote = null;
-      applyRemoteContent(c);
+    if (S.pendingRemoteRow && window.TripApp && !window.TripApp.isEditing()) {
+      var row = S.pendingRemoteRow; S.pendingRemoteRow = null;
+      applyRemoteRow(row, null);
     }
   }, 1200);
+  // Resume hooks: phones suspend background tabs and drop the realtime socket.
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) refetchCurrent(); });
+  window.addEventListener("focus", refetchCurrent);
+  window.addEventListener("online", refetchCurrent);
 
   /* =====================================================================
    *  Auth flows
@@ -710,6 +753,7 @@
       console.warn("[cloud] afterLogin error:", err);
     }).then(function () {
       S.loggingIn = false;
+      S.bootedFromCache = null;   // authoritative load done; no longer "optimistic"
     });
   }
 
@@ -727,6 +771,35 @@
     else document.body.appendChild(b);
   }
 
+  // Synchronous fast-path: if we previously had a cloud trip open AND a Supabase
+  // session token is present AND we cached the trip locally, paint that cached
+  // cloud trip immediately (instead of the guest snapshot) and repoint storage
+  // to the per-trip cache key. This removes the network-length "stale flash" and
+  // guarantees that any edit during startup writes to the cloud cache — never to
+  // the guest backup. afterLogin() then refetches the authoritative latest.
+  function hasSupabaseSession() {
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && /^sb-.*-auth-token$/.test(k) && localStorage.getItem(k)) return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  function bootFastPath() {
+    try {
+      if (!window.TripApp) return;
+      var activeId = localStorage.getItem("cloud-active-trip");
+      if (!activeId || !hasSupabaseSession()) return;
+      var cacheRaw = localStorage.getItem("cloud-trip:" + activeId);
+      if (!cacheRaw) return;
+      var cached = JSON.parse(cacheRaw);
+      window.TripApp.setActiveKey("cloud-trip:" + activeId);
+      window.TripApp.setContent(cached, { silent: true });
+      S.bootedFromCache = activeId;
+    } catch (e) { /* fall back to normal guest paint */ }
+  }
+
   function init() {
     injectStyles();
     // wait for TripApp bridge
@@ -734,6 +807,9 @@
     (function waitApp() {
       if (window.TripApp) { watchTopbar(); } else if (tries++ < 50) { setTimeout(waitApp, 60); } else { watchTopbar(); }
     })();
+
+    // Optimistic cache paint (signed-in returning visit) — before any network.
+    bootFastPath();
 
     // onAuthStateChange fires with INITIAL_SESSION immediately — no need for a
     // separate getSession() call, which would race and call afterLogin() twice.
@@ -752,7 +828,17 @@
       if (S.user) {
         setTimeout(afterLogin, 0);
       } else {
-        setTimeout(function () { mountAccountButton(); maybeAcceptInviteGuest(); }, 0);
+        setTimeout(function () {
+          // We optimistically painted a cached cloud trip but there's no valid
+          // session → revert to the guest store so we never show cloud data to
+          // a signed-out user.
+          if (S.bootedFromCache && window.TripApp) {
+            S.bootedFromCache = null;
+            window.TripApp.setActiveKey(null);
+            window.TripApp.reloadLocal();
+          }
+          mountAccountButton(); maybeAcceptInviteGuest();
+        }, 0);
       }
     });
   }
