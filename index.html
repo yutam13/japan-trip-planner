@@ -182,7 +182,7 @@ a { color: inherit; text-decoration: none; }
 }
 .brand-menu-btn:hover { background: var(--border-soft); }
 .brand-menu-btn:active { transform: scale(.94); }
-.topbar-right { display: flex; align-items: center; gap: 8px; }
+.topbar-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 
 /* ---------- Day actions row (small inline action group in the day overview) ---------- */
 .day-actions-row {
@@ -201,20 +201,61 @@ a { color: inherit; text-decoration: none; }
 .day-action-chip:active { transform: scale(.96); }
 .day-action-chip.danger:hover { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
 
-/* ---------- Trip-cover band — sits above pills, optional ---------- */
-.trip-cover {
-  max-width: 980px; margin: 14px auto 0; padding: 0 16px;
-  font-size: 14px; color: var(--text-muted);
-  display: flex; align-items: center; gap: 8px;
-  font-weight: 500;
+/* ---------- Trip cover banner — themed artwork near the trip name ---------- */
+.trip-cover-wrap { max-width: 980px; margin: 14px auto 0; padding: 0 16px; }
+.cover-banner {
+  position: relative; overflow: hidden;
+  width: 100%; text-align: left;
+  border: 0; border-radius: 20px;
+  color: #fff;
+  padding: 16px 18px; min-height: 92px;
+  display: flex; align-items: center; gap: 14px;
+  box-shadow: var(--shadow-md);
   cursor: pointer;
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+  animation: cardIn .35s ease both;
 }
-.trip-cover:hover { color: var(--text); }
-.trip-cover .cover-icon { color: var(--text-soft); }
-.trip-cover.empty { font-style: italic; }
+.cover-banner:hover { filter: brightness(1.04); box-shadow: var(--shadow-lg); }
+.cover-banner:active { transform: scale(.99); }
+.cover-banner::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle at 0% 0%, rgba(255,255,255,.22), transparent 45%),
+              radial-gradient(circle at 100% 120%, rgba(0,0,0,.20), transparent 55%);
+  pointer-events: none;
+}
+.cover-banner .cb-motif { font-size: 44px; line-height: 1; z-index: 1; filter: drop-shadow(0 4px 8px rgba(0,0,0,.22)); }
+.cover-banner .cb-motif-ghost {
+  position: absolute; right: -16px; bottom: -34px;
+  font-size: 150px; line-height: 1; opacity: .16; pointer-events: none;
+}
+.cover-banner .cb-text { z-index: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cover-banner .cb-title { font-weight: 800; font-size: 18px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,.18); }
+.cover-banner .cb-sub { font-size: 13px; opacity: .92; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cover-banner .cb-edit {
+  z-index: 1; flex: 0 0 auto;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.22); backdrop-filter: blur(4px);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+}
 @media (min-width: 720px) {
-  .trip-cover { padding: 0 32px; }
+  .trip-cover-wrap { padding: 0 32px; }
+  .cover-banner { min-height: 108px; padding: 20px 24px; }
+  .cover-banner .cb-title { font-size: 21px; }
 }
+
+/* ---------- Theme picker (in Edit Trip sheet) ---------- */
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.theme-cell {
+  position: relative; height: 58px; border-radius: 14px;
+  border: 2px solid transparent; cursor: pointer; overflow: hidden;
+  color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  transition: transform .1s ease, box-shadow .15s ease;
+}
+.theme-cell:active { transform: scale(.96); }
+.theme-cell .tc-emoji { font-size: 20px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+.theme-cell .tc-label { font-size: 10.5px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
+.theme-cell.is-current { border-color: #0b1220; box-shadow: 0 0 0 2px #fff inset, var(--shadow-md); }
+.theme-cell.is-current::after { content: "✓"; position: absolute; top: 4px; right: 6px; font-size: 12px; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
 
 /* ---------- Add Day pill (in days mode) ---------- */
 .pill.add-pill-day {
@@ -246,7 +287,7 @@ a { color: inherit; text-decoration: none; }
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid var(--border-soft);
 }
-.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
 .brand-mark {
   width: 40px; height: 40px; border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #ff7a8a 0%, #ef4444 65%, #b91c1c 100%);
@@ -254,9 +295,9 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 6px 16px -4px rgba(239, 68, 68, .55);
   flex: 0 0 auto;
 }
-.brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
-.brand-title { font-weight: 800; font-size: 17px; color: var(--text); letter-spacing: -.015em; }
-.brand-sub { font-size: 12px; color: var(--text-soft); font-weight: 500; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.brand-title { font-weight: 800; font-size: 17px; color: var(--text); letter-spacing: -.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.brand-sub { font-size: 12px; color: var(--text-soft); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
 .btn-reset {
   font-size: 13px; font-weight: 700; color: var(--text);
@@ -766,7 +807,8 @@ a { color: inherit; text-decoration: none; }
 .app.read-only .chip[data-action="edit-loc-c"],
 .app.read-only .chip[data-action^="delete"],
 .app.read-only .chip[data-action^="toggle-visited"],
-.app.read-only .trip-cover { display: none !important; }
+.app.read-only .cover-banner { pointer-events: none; }
+.app.read-only .cover-banner .cb-edit { display: none; }
 .app.read-only .brand-title.editable,
 .app.read-only .brand-sub.editable,
 .app.read-only .ov-cal { pointer-events: none; }
@@ -1171,8 +1213,45 @@ a { color: inherit; text-decoration: none; }
     title: "Japan 2026",
     headline: "Our Japan adventure",
     subtitle: "13 May → 31 May",
-    cover: "Tokyo → Nagano → Kyoto → Fuji → Tokyo"
+    cover: "Tokyo → Nagano → Kyoto → Fuji → Tokyo",
+    theme: "sunset"
   };
+
+  // World-wide cover themes (offline-safe gradient artwork + motif). Works for
+  // any destination — no Japan-specific assets, no external images required.
+  var TRIP_THEMES = [
+    { key: "sunset",    label: "Sunset",   emoji: "🌅", g: "linear-gradient(135deg,#ff6a88 0%,#ff9a8b 45%,#ffb86c 100%)" },
+    { key: "ocean",     label: "Ocean",    emoji: "🌊", g: "linear-gradient(135deg,#2193b0 0%,#6dd5ed 100%)" },
+    { key: "tropical",  label: "Tropical", emoji: "🌴", g: "linear-gradient(135deg,#11998e 0%,#38ef7d 100%)" },
+    { key: "mountains", label: "Mountains",emoji: "🏔️", g: "linear-gradient(135deg,#4b6cb7 0%,#182848 100%)" },
+    { key: "city",      label: "City",     emoji: "🌆", g: "linear-gradient(135deg,#667eea 0%,#764ba2 100%)" },
+    { key: "desert",    label: "Desert",   emoji: "🏜️", g: "linear-gradient(135deg,#f6d365 0%,#fda085 100%)" },
+    { key: "forest",    label: "Forest",   emoji: "🌲", g: "linear-gradient(135deg,#0ba360 0%,#3cba92 100%)" },
+    { key: "snow",      label: "Snow",     emoji: "❄️", g: "linear-gradient(135deg,#83a4d4 0%,#b6fbff 100%)" },
+    { key: "lavender",  label: "Lavender", emoji: "💜", g: "linear-gradient(135deg,#a18cd1 0%,#fbc2eb 100%)" },
+    { key: "blossom",   label: "Blossom",  emoji: "🌸", g: "linear-gradient(135deg,#ff9a9e 0%,#fecfef 100%)" },
+    { key: "safari",    label: "Safari",   emoji: "🦁", g: "linear-gradient(135deg,#c79081 0%,#dfa579 100%)" },
+    { key: "aurora",    label: "Aurora",   emoji: "🌌", g: "linear-gradient(135deg,#5ee7df 0%,#b490ca 100%)" },
+    { key: "classic",   label: "Classic",  emoji: "🧳", g: "linear-gradient(135deg,#ff5b6e 0%,#ff8a4c 50%,#ffd166 100%)" }
+  ];
+  function getTheme(key) {
+    for (var i = 0; i < TRIP_THEMES.length; i++) if (TRIP_THEMES[i].key === key) return TRIP_THEMES[i];
+    return TRIP_THEMES[0];
+  }
+
+  // A fresh, valid planner: generic title + a single Day 1, no custom content.
+  // Used by Reset so the user is never left in an empty/broken state.
+  function cleanDefaultPlanner() {
+    return {
+      trip: { title: "My Trip", headline: "", subtitle: "", cover: "", theme: "sunset" },
+      days: [{
+        id: "day-" + newId().slice(0, 8),
+        date: "", weekday: "", city: "", title: "Day 1", description: "",
+        done: false, infoOnly: false, notes: "",
+        attractions: [], restaurants: [], customItems: {}
+      }]
+    };
+  }
 
   function loadStored() {
     var fallback = { trip: clone(defaultTrip), days: clone(defaultData), customSections: [], locations: [] };
@@ -1956,6 +2035,17 @@ a { color: inherit; text-decoration: none; }
     );
   }
 
+  function renderThemeGrid(currentKey) {
+    var cur = getTheme(currentKey).key;
+    return '<div class="theme-grid">' + TRIP_THEMES.map(function (th) {
+      return '<button type="button" class="theme-cell' + (th.key === cur ? " is-current" : "") + '" ' +
+        'data-action="set-theme" data-theme="' + th.key + '" style="background:' + th.g + '" aria-label="' + esc(th.label) + ' theme">' +
+        '<span class="tc-emoji" aria-hidden="true">' + th.emoji + '</span>' +
+        '<span class="tc-label">' + esc(th.label) + '</span>' +
+      '</button>';
+    }).join("") + '</div>';
+  }
+
   function renderEditTripSheet() {
     if (state.adding !== "__edit_trip__") return "";
     var t = state.trip || defaultTrip;
@@ -1971,7 +2061,8 @@ a { color: inherit; text-decoration: none; }
             '<div class="field"><label>Trip title</label><input class="input" name="title" required maxlength="100" value="' + esc(t.title || "") + '" placeholder="e.g. Japan Adventure 2026"></div>' +
             '<div class="field"><label>Headline</label><input class="input" name="headline" maxlength="120" value="' + esc(t.headline || "") + '" placeholder="e.g. Our family Japan tour"></div>' +
             '<div class="field"><label>Subtitle / dates</label><input class="input" name="subtitle" maxlength="80" value="' + esc(t.subtitle || "") + '" placeholder="e.g. 13 May → 31 May"></div>' +
-            '<div class="field"><label>Cover description</label><textarea class="textarea" name="cover" rows="3" placeholder="A short summary, e.g. Tokyo → Kyoto → Fuji">' + esc(t.cover || "") + '</textarea></div>' +
+            '<div class="field"><label>Cover description</label><textarea class="textarea" name="cover" rows="3" placeholder="A short summary, e.g. Rome → Florence → Venice">' + esc(t.cover || "") + '</textarea></div>' +
+            '<div class="field"><label>Cover theme</label>' + renderThemeGrid(t.theme) + '</div>' +
             '<div class="sheet-actions">' +
               '<button type="submit" class="btn-primary">Save</button>' +
               '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
@@ -2051,19 +2142,32 @@ a { color: inherit; text-decoration: none; }
     );
   }
 
+  function renderCoverBanner(t) {
+    var theme = getTheme(t.theme);
+    var heading = esc(t.headline || t.title || "Your trip");
+    var sub = t.cover ? esc(t.cover) : (t.subtitle ? esc(t.subtitle) : "Tap to add a description &amp; choose a cover");
+    return (
+      '<div class="trip-cover-wrap">' +
+        '<button class="cover-banner" data-action="open-edit-trip" style="background:' + theme.g + '" aria-label="Edit trip cover">' +
+          '<span class="cb-motif" aria-hidden="true">' + theme.emoji + '</span>' +
+          '<span class="cb-motif-ghost" aria-hidden="true">' + theme.emoji + '</span>' +
+          '<span class="cb-text"><span class="cb-title">' + heading + '</span><span class="cb-sub">' + sub + '</span></span>' +
+          '<span class="cb-edit" aria-hidden="true">✏️</span>' +
+        '</button>' +
+      '</div>'
+    );
+  }
+
   function render() {
     var body = state.mode === "locations" ? renderLocationsView() : renderDaysView();
     var t = state.trip || defaultTrip;
-    var coverBand = (state.mode === "days" && t.cover)
-      ? '<div class="trip-cover" data-action="open-edit-trip" title="Edit trip details"><span class="cover-icon">🗒️</span><span>' + esc(t.cover) + '</span></div>'
-      : (state.mode === "days"
-          ? '<div class="trip-cover empty" data-action="open-edit-trip"><span class="cover-icon">＋</span><span>Add trip description</span></div>'
-          : '');
+    var theme = getTheme(t.theme);
+    var coverBand = renderCoverBanner(t);   // trip cover shows in both modes
     var html =
       '<div class="app has-toggle' + (__readOnly ? ' read-only' : '') + '">' +
         '<header class="topbar">' +
           '<div class="brand">' +
-            '<div class="brand-mark" aria-hidden="true">🗾</div>' +
+            '<div class="brand-mark" aria-hidden="true" style="background:' + theme.g + '">' + theme.emoji + '</div>' +
             '<div class="brand-text">' +
               '<div class="brand-title editable" data-action="open-edit-trip" title="Edit trip details">' + esc(t.title || "Trip") + '</div>' +
               '<div class="brand-sub editable" data-action="open-edit-trip">' + esc(t.subtitle || "") + '</div>' +
@@ -2108,14 +2212,16 @@ a { color: inherit; text-decoration: none; }
     }
 
     if (action === "reset") {
-      if (confirm("Reset everything? This erases all edits, custom sections, and locations, and reloads the original itinerary.")) {
-        state.days = JSON.parse(JSON.stringify(defaultData));
+      if (confirm("Reset this planner to a clean trip? This removes all days, places, custom sections and locations, and starts you with a fresh trip and Day 1.")) {
+        var fresh = cleanDefaultPlanner();
+        state.trip = fresh.trip;
+        state.days = fresh.days;
         state.customSections = [];
         state.locations = [];
         state.mode = "days";
         state.selectedDayId = state.days[0].id;
         state.selectedLocationId = null;
-        state.adding = null; state.editing = null; state.renamingSection = null; state.renamingTitle = null;
+        state.adding = null; state.editing = null; state.renamingSection = null; state.renamingTitle = null; state.iconPicker = null;
         persist(); render();
       }
       return;
@@ -2298,18 +2404,36 @@ a { color: inherit; text-decoration: none; }
     /* Trip-level edit */
     if (action === "open-edit-trip") { state.adding = "__edit_trip__"; state.editing = null; state.renamingTitle = null; state.iconPicker = null; render(); return; }
 
+    if (action === "set-theme") {
+      state.trip = state.trip || Object.assign({}, defaultTrip);
+      // Preserve any text the user already typed in the open trip form before re-render.
+      var tripForm = document.querySelector('form[data-form="edit-trip"]');
+      if (tripForm) {
+        ["title", "headline", "subtitle", "cover"].forEach(function (n) {
+          var el = tripForm.querySelector('[name="' + n + '"]');
+          if (el) state.trip[n] = el.value;
+        });
+      }
+      state.trip.theme = t.dataset.theme;
+      persist(); render();
+      return;
+    }
+
     /* Day-level edit & lifecycle */
     if (action === "open-edit-day") { state.adding = "__edit_day__"; state.editing = null; state.renamingTitle = null; state.iconPicker = null; render(); return; }
     if (action === "add-day") {
+      // Create the day immediately on a single click — no modal. The user can
+      // tap "Edit details" afterwards if they want to fill it in.
+      var n = state.days.length + 1;
       var nd = {
         id: "day-" + newId().slice(0, 8),
-        date: "", weekday: "", city: "", title: "New day", description: "",
+        date: "", weekday: "", city: "", title: "Day " + n, description: "",
         done: false, infoOnly: false, notes: "",
         attractions: [], restaurants: [], customItems: {}
       };
       state.days.push(nd);
       state.selectedDayId = nd.id;
-      state.adding = "__edit_day__";        // open editor so the user can fill it in
+      state.adding = null; state.editing = null; state.renamingTitle = null;
       persist(); render();
       return;
     }

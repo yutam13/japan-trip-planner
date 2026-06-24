@@ -618,7 +618,20 @@
    * ===================================================================== */
   function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; }
   function doGoogle() {
-    sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: REDIRECT } });
+    // signInWithOAuth redirects the browser on success. If the Google provider
+    // isn't enabled in Supabase (or misconfigured), it resolves with an error
+    // and does NOT redirect — surface that clearly instead of failing silently.
+    sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: REDIRECT } })
+      .then(function (r) {
+        if (r && r.error) {
+          console.warn("[cloud] Google OAuth error:", r.error.message);
+          toast("Google sign-in isn’t set up yet — use email for now.");
+        }
+      })
+      .catch(function (e) {
+        console.warn("[cloud] Google OAuth threw:", e);
+        toast("Google sign-in isn’t available right now — use email.");
+      });
   }
   function doSignin() {
     sb.auth.signInWithPassword({ email: val("cl-email"), password: val("cl-pass") }).then(function (r) {
