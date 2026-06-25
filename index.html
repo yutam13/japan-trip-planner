@@ -257,6 +257,79 @@ a { color: inherit; text-decoration: none; }
 .theme-cell.is-current { border-color: #0b1220; box-shadow: 0 0 0 2px #fff inset, var(--shadow-md); }
 .theme-cell.is-current::after { content: "✓"; position: absolute; top: 4px; right: 6px; font-size: 12px; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
 
+/* ---------- Feature 1: Day info card ---------- */
+.info-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 14px 16px; margin-bottom: 18px; box-shadow: var(--shadow-sm);
+  animation: cardIn .3s ease both;
+}
+.info-card .info-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.info-card .info-head h4 { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.info-row { display: flex; gap: 8px; align-items: baseline; font-size: 14px; padding: 4px 0; line-height: 1.45; }
+.info-row .ir-emoji { flex: 0 0 auto; }
+.info-row .ir-lab { font-weight: 700; color: var(--text-muted); flex: 0 0 auto; }
+.info-row .ir-val { color: #2b3344; min-width: 0; word-break: break-word; }
+.btn-info {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 700;
+  background: var(--c-soft); color: var(--c-accent); border: 1px solid transparent;
+  transition: background .15s, transform .1s;
+}
+.btn-info:hover { filter: brightness(.97); }
+.btn-info:active { transform: scale(.96); }
+
+/* ---------- Feature 2: Section tabs (swipeable) ---------- */
+.section-tabs {
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  padding: 4px; margin: 0 0 14px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  -webkit-overflow-scrolling: touch; position: sticky; top: 0; z-index: 5;
+}
+.section-tabs::-webkit-scrollbar { display: none; }
+.sec-tab {
+  flex: 0 0 auto; padding: 9px 15px; border-radius: var(--r-pill);
+  font-size: 13.5px; font-weight: 700; color: var(--text-muted); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: background .18s, color .18s, transform .1s;
+}
+.sec-tab:active { transform: scale(.97); }
+.sec-tab .st-count { font-size: 11px; font-weight: 800; opacity: .7; }
+.sec-tab.is-active { background: var(--text); color: #fff; }
+.sec-tab.is-active .st-count { opacity: .85; }
+.section-panels { position: relative; }
+.section-panel { display: none; animation: panelIn .25s ease both; }
+.section-panel.is-active { display: block; }
+@keyframes panelIn { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
+.section-panel .section { margin-top: 0; }
+.swipe-hint { text-align: center; font-size: 11.5px; color: var(--text-soft); margin: 2px 0 10px; }
+@media (min-width: 720px) { .swipe-hint { display: none; } }
+
+/* ---------- Feature 3: Quick day jump ---------- */
+.btn-jump {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 14px; border-radius: var(--r-pill);
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.32);
+  color: #fff; font-size: 13px; font-weight: 700;
+  transition: background .15s, transform .1s;
+}
+.btn-jump:hover { background: rgba(255,255,255,.28); }
+.btn-jump:active { transform: scale(.97); }
+.jump-list { display: flex; flex-direction: column; gap: 6px; }
+.jump-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 11px 12px; border-radius: 13px; border: 1px solid var(--border); background: #fff;
+  transition: background .15s, transform .1s;
+}
+.jump-item:hover { background: #f7f9fc; }
+.jump-item:active { transform: scale(.99); }
+.jump-item.cur { border-color: var(--c-accent); background: var(--c-soft); }
+.jump-item .ji-num { width: 34px; height: 34px; border-radius: 10px; background: var(--border-soft); color: var(--text-muted); font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.jump-item.cur .ji-num { background: var(--c-accent); color: #fff; }
+.jump-item .ji-main { flex: 1; min-width: 0; }
+.jump-item .ji-title { font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jump-item .ji-sub { font-size: 12px; color: var(--text-soft); }
+.jump-item .ji-emoji { font-size: 20px; }
+
 /* ---------- Add Day pill (in days mode) ---------- */
 .pill.add-pill-day {
   width: 76px;
@@ -809,6 +882,7 @@ a { color: inherit; text-decoration: none; }
 .app.read-only .chip[data-action^="toggle-visited"],
 .app.read-only .cover-banner { pointer-events: none; }
 .app.read-only .cover-banner .cb-edit { display: none; }
+.app.read-only .info-card .btn-icon { display: none; }
 .app.read-only .brand-title.editable,
 .app.read-only .brand-sub.editable,
 .app.read-only .ov-cal { pointer-events: none; }
@@ -1293,7 +1367,8 @@ a { color: inherit; text-decoration: none; }
       adding: null,             // section key for add form: "attractions" | "restaurants" | section id | "__new_section__" | "__new_location__" | "__edit_trip__" | "__edit_day__"
       renamingSection: null,    // section id being renamed
       renamingTitle: null,      // "day" | "location" | "trip-title" | "trip-sub" — inline rename
-      iconPicker: null          // { target: "day"|"section:<id>"|"item:<kind>:<id>"|..., currentIcon: string } or null
+      iconPicker: null,         // { target: "day"|"section:<id>"|"item:<kind>:<id>"|..., currentIcon: string } or null
+      activeSectionTab: 0       // Feature 2: which section tab (panel) is visible
     };
   })();
 
@@ -1425,9 +1500,11 @@ a { color: inherit; text-decoration: none; }
         '</div>' +
         '<div class="ov-actions">' +
           '<button class="btn-done ' + doneOn + '" data-action="toggle-done">' + doneLabel + '</button>' +
-          '<button class="day-action-chip" data-action="open-edit-day">⚙️ Edit details</button>' +
+          (state.days.length > 1 ? '<button class="btn-jump" data-action="open-jump">🗓️ Jump to day</button>' : '') +
         '</div>' +
         '<div class="day-actions-row">' +
+          '<button class="day-action-chip" data-action="open-day-info">ℹ️ Info</button>' +
+          '<button class="day-action-chip" data-action="open-edit-day">⚙️ Edit details</button>' +
           '<button class="day-action-chip" data-action="duplicate-day">⧉ Duplicate</button>' +
           (canMoveUp ? '<button class="day-action-chip" data-action="move-day-up">↑ Move up</button>' : '') +
           (canMoveDown ? '<button class="day-action-chip" data-action="move-day-down">↓ Move down</button>' : '') +
@@ -1584,11 +1661,17 @@ a { color: inherit; text-decoration: none; }
   }
 
   function renderLocationContent(loc) {
+    var panels = [
+      { label: "Attractions", icon: "🗺️", count: (loc.attractions || []).length, html: renderLocationAttractions(loc) },
+      { label: "Restaurants", icon: "🍱", count: (loc.restaurants || []).length, html: renderLocationRestaurants(loc) }
+    ];
+    state.customSections.forEach(function (sec) {
+      var c = (loc.customItems && loc.customItems[sec.id]) ? loc.customItems[sec.id].length : 0;
+      panels.push({ label: sec.label, icon: "✨", count: c, html: renderLocationCustomSection(sec, loc) });
+    });
     return (
       '<div class="content">' +
-        renderLocationAttractions(loc) +
-        renderLocationRestaurants(loc) +
-        state.customSections.map(function (sec) { return renderLocationCustomSection(sec, loc); }).join("") +
+        renderTabbedSections(panels) +
         renderNewSectionForm() +
       '</div>'
     );
@@ -1987,15 +2070,54 @@ a { color: inherit; text-decoration: none; }
       );
     }
     var noteBlock = day.notes ? ('<div class="tip-card"><p>' + esc(day.notes) + '</p></div>') : '';
+    var panels = [
+      { label: "Attractions", icon: "🗺️", count: day.attractions.length, html: renderAttractionsSection(day) },
+      { label: "Restaurants", icon: "🍱", count: day.restaurants.length, html: renderRestaurantsSection(day) }
+    ];
+    state.customSections.forEach(function (sec) {
+      var c = (day.customItems && day.customItems[sec.id]) ? day.customItems[sec.id].length : 0;
+      panels.push({ label: sec.label, icon: "✨", count: c, html: renderCustomSection(sec, day) });
+    });
     return (
       '<div class="content">' +
         noteBlock +
-        renderAttractionsSection(day) +
-        renderRestaurantsSection(day) +
-        state.customSections.map(function (sec) { return renderCustomSection(sec, day); }).join("") +
+        renderDayInfoCard(day) +
+        renderTabbedSections(panels) +
         renderNewSectionForm() +
       '</div>'
     );
+  }
+
+  /* Feature 1 — compact per-day travel info (only filled rows are shown). */
+  var DAY_INFO_FIELDS = [
+    ["flight", "✈️", "Flight"], ["hotel", "🏨", "Hotel"], ["transport", "🚆", "Transport"],
+    ["packing", "🎒", "Packing"], ["reminders", "⏰", "Reminders"]
+  ];
+  function renderDayInfoCard(day) {
+    var info = day.info || {};
+    var rows = DAY_INFO_FIELDS.filter(function (f) { return info[f[0]] && String(info[f[0]]).trim(); })
+      .map(function (f) {
+        return '<div class="info-row"><span class="ir-emoji">' + f[1] + '</span><span class="ir-lab">' + f[2] + ':</span><span class="ir-val">' + esc(info[f[0]]) + '</span></div>';
+      }).join("");
+    if (!rows) return "";   // empty → the "ℹ️ Info" button in the day header adds it
+    return '<div class="info-card"><div class="info-head"><h4>Day info</h4>' +
+      '<button class="btn-icon" data-action="open-day-info" title="Edit day info" aria-label="Edit day info">✏️</button></div>' + rows + '</div>';
+  }
+
+  /* Feature 2 — section tab bar + swipeable one-at-a-time panels. */
+  function renderTabbedSections(panels) {
+    if (!panels.length) return "";
+    var active = Math.max(0, Math.min(state.activeSectionTab || 0, panels.length - 1));
+    var tabs = '<div class="section-tabs" id="section-tabs">' + panels.map(function (p, i) {
+      return '<button class="sec-tab' + (i === active ? " is-active" : "") + '" data-action="section-tab" data-idx="' + i + '">' +
+        '<span class="st-icon" aria-hidden="true">' + p.icon + '</span> ' + esc(p.label) +
+        ' <span class="st-count">' + p.count + '</span></button>';
+    }).join("") + '</div>';
+    var hint = panels.length > 1 ? '<div class="swipe-hint">← swipe between sections →</div>' : "";
+    var body = '<div class="section-panels" id="section-panels">' + panels.map(function (p, i) {
+      return '<div class="section-panel' + (i === active ? " is-active" : "") + '">' + p.html + '</div>';
+    }).join("") + '</div>';
+    return tabs + hint + body;
   }
 
   /* =========================================================================
@@ -2117,6 +2239,59 @@ a { color: inherit; text-decoration: none; }
     return "";
   }
 
+  // Feature 1 — compact day-info editor (all fields optional).
+  function renderDayInfoSheet() {
+    if (state.adding !== "__day_info__") return "";
+    var day = getSelectedDay();
+    if (!day) return "";
+    var info = day.info || {};
+    var fields = DAY_INFO_FIELDS.map(function (f) {
+      return '<div class="field"><label>' + f[1] + ' ' + f[2] + '</label>' +
+        '<input class="input" name="' + f[0] + '" maxlength="280" value="' + esc(info[f[0]] || "") + '" placeholder="optional"></div>';
+    }).join("");
+    return (
+      '<div class="sheet-scrim" data-action="close-sheet">' +
+        '<div class="sheet">' +
+          '<div class="sheet-handle" aria-hidden="true"></div>' +
+          '<div class="sheet-header"><h3 class="sheet-title">Day info</h3>' +
+            '<button class="sheet-close" data-action="cancel-form" aria-label="Close">✕</button></div>' +
+          '<p style="margin:0 0 10px;font-size:13px;color:var(--text-soft);">Fill in only what you need — flight, hotel, transport, packing, reminders.</p>' +
+          '<form class="sheet-form" data-form="day-info" autocomplete="off">' + fields +
+            '<div class="sheet-actions">' +
+              '<button type="submit" class="btn-primary">Save</button>' +
+              '<button type="button" class="btn-secondary" data-action="cancel-form">Cancel</button>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // Feature 3 — quick day jump.
+  function renderJumpSheet() {
+    if (state.adding !== "__jump__") return "";
+    var items = state.days.map(function (d, i) {
+      var icon = d.icon || cityIcon[d.city] || "📍";
+      var cur = d.id === state.selectedDayId ? " cur" : "";
+      var sub = [d.date, d.city].filter(Boolean).join(" · ");
+      return '<button class="jump-item' + cur + '" data-action="jump-day" data-day-id="' + esc(d.id) + '">' +
+        '<span class="ji-num">' + (i + 1) + '</span>' +
+        '<span class="ji-main"><span class="ji-title">' + esc(d.title || ("Day " + (i + 1))) + '</span>' +
+        (sub ? '<span class="ji-sub">' + esc(sub) + '</span>' : "") + '</span>' +
+        '<span class="ji-emoji" aria-hidden="true">' + icon + '</span></button>';
+    }).join("");
+    return (
+      '<div class="sheet-scrim" data-action="close-sheet">' +
+        '<div class="sheet">' +
+          '<div class="sheet-handle" aria-hidden="true"></div>' +
+          '<div class="sheet-header"><h3 class="sheet-title">Jump to day</h3>' +
+            '<button class="sheet-close" data-action="cancel-form" aria-label="Close">✕</button></div>' +
+          '<div class="jump-list">' + items + '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function renderModeToggle() {
     var dActive = state.mode === "days" ? " is-active mode-days" : "";
     var lActive = state.mode === "locations" ? " is-active mode-locations" : "";
@@ -2184,6 +2359,8 @@ a { color: inherit; text-decoration: none; }
         renderEditTripSheet() +
         renderEditDaySheet() +
         renderIconPickerSheet() +
+        renderDayInfoSheet() +
+        renderJumpSheet() +
       '</div>';
     document.getElementById("root").innerHTML = html;
 
@@ -2205,8 +2382,29 @@ a { color: inherit; text-decoration: none; }
     if (action === "select-day") {
       state.selectedDayId = t.dataset.dayId;
       state.adding = null; state.editing = null; state.renamingSection = null;
+      state.activeSectionTab = 0;   // reset section tab when changing day
       persist();
       render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    /* Feature 2 — section tabs */
+    if (action === "section-tab") {
+      state.activeSectionTab = parseInt(t.dataset.idx, 10) || 0;
+      render();
+      return;
+    }
+
+    /* Feature 1 — day info */
+    if (action === "open-day-info") { state.adding = "__day_info__"; state.editing = null; state.renamingTitle = null; state.iconPicker = null; render(); return; }
+
+    /* Feature 3 — quick day jump */
+    if (action === "open-jump") { state.adding = "__jump__"; state.editing = null; render(); return; }
+    if (action === "jump-day") {
+      state.selectedDayId = t.dataset.dayId;
+      state.adding = null; state.editing = null; state.activeSectionTab = 0;
+      persist(); render();
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -2692,6 +2890,18 @@ a { color: inherit; text-decoration: none; }
       return;
     }
 
+    /* Feature 1 — day info (all optional) */
+    if (kind === "day-info") {
+      updateSelectedDay(function (d) {
+        d.info = {
+          flight: data.flight || "", hotel: data.hotel || "", transport: data.transport || "",
+          packing: data.packing || "", reminders: data.reminders || ""
+        };
+      });
+      state.adding = null;
+      return;
+    }
+
     /* Custom icon (typed in icon picker) */
     if (kind === "custom-icon") {
       if (!state.iconPicker) return;
@@ -2719,6 +2929,27 @@ a { color: inherit; text-decoration: none; }
       return;
     }
   });
+
+  /* Feature 2 — swipe gesture to move between section tabs (attached once;
+     reads the DOM each time so it survives re-renders). */
+  var _swipeX = null, _swipeY = null;
+  document.addEventListener("touchstart", function (e) {
+    var inPanels = e.target.closest && e.target.closest("#section-panels");
+    if (!inPanels || !e.touches || !e.touches.length) { _swipeX = null; return; }
+    _swipeX = e.touches[0].clientX; _swipeY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener("touchend", function (e) {
+    if (_swipeX == null || !e.changedTouches || !e.changedTouches.length) return;
+    var dx = e.changedTouches[0].clientX - _swipeX;
+    var dy = e.changedTouches[0].clientY - _swipeY;
+    _swipeX = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;  // require a mostly-horizontal swipe
+    var count = document.querySelectorAll(".section-panel").length;
+    if (count < 2) return;
+    var cur = Math.max(0, Math.min(state.activeSectionTab || 0, count - 1));
+    var next = Math.max(0, Math.min(dx < 0 ? cur + 1 : cur - 1, count - 1));
+    if (next !== cur) { state.activeSectionTab = next; render(); }
+  }, { passive: true });
 
   /* =========================================================================
      Init
@@ -2760,6 +2991,7 @@ a { color: inherit; text-decoration: none; }
           state.selectedLocationId = state.locations.some(function (l) { return l.id === state.selectedLocationId; })
             ? state.selectedLocationId : (state.locations[0] ? state.locations[0].id : null);
           state.editing = null; state.adding = null; state.renamingSection = null; state.renamingTitle = null; state.iconPicker = null;
+          state.activeSectionTab = 0;
         }
         persist();
         render();

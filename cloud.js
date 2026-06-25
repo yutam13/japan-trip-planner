@@ -55,7 +55,8 @@
     trips: [],          // [{id,title,updated_at,owner_id,role}]
     currentTripId: localStorage.getItem("cloud-active-trip") || null,
     currentRole: null,
-    channel: null,
+    channel: null,           // realtime channel for the open trip's content
+    memberChannel: null,     // realtime channel for my membership changes (shared-with-me)
     saveTimer: null,
     pendingRemoteRow: null,   // buffered remote row to apply once editing stops
     knownUpdatedAt: null,     // updated_at of the content currently in the app (version guard)
@@ -331,8 +332,9 @@
   function renderShare() {
     var isOwner = S.currentRole === "owner";
     var rows = shareMembers.map(function (m) {
-      var nm = (m.profile && m.profile.display_name) || m.user_id.slice(0, 8);
+      var nm = memberLabel(m);
       var em = (m.profile && m.profile.email) || "";
+      if (em === nm) em = "";   // avoid showing the email twice when it's also the label
       var removable = isOwner && m.role !== "owner";
       return (
         '<div class="member-row"><div class="mr-main"><div class="mr-name">' + esc(nm) + ' <span class="tc-badge ' + m.role + '">' + m.role + '</span></div>' +
@@ -483,23 +485,29 @@
   }
 
   function loadMembers() {
-    return sb.from("trip_members").select("trip_id,user_id,role").eq("trip_id", S.currentTripId).then(function (r) {
-      var members = (r.data) || [];
-      // fetch profiles for display (own profile always readable; others may be limited by RLS — fall back to id)
-      var ids = members.map(function (m) { return m.user_id; });
-      if (!ids.length) { shareMembers = members; return; }
-      return sb.from("profiles").select("id,email,display_name,avatar_url").in("id", ids).then(function (p) {
-        var pmap = {}; ((p.data) || []).forEach(function (x) { pmap[x.id] = x; });
-        shareMembers = members.map(function (m) { return Object.assign({}, m, { profile: pmap[m.user_id] }); });
+    // Use the security-definer RPC so we can read co-members' display names /
+    // emails (the profiles table is own-row-only under RLS). Never show raw IDs.
+    return sb.rpc("list_trip_members", { p_trip: S.currentTripId }).then(function (r) {
+      if (r.error) { console.warn("[cloud] list_trip_members", r.error); shareMembers = []; return; }
+      shareMembers = (r.data || []).map(function (m) {
+        return { user_id: m.user_id, role: m.role,
+                 profile: { display_name: m.display_name, email: m.email, avatar_url: m.avatar_url } };
       });
-    }).catch(function () { shareMembers = []; });
+    }).catch(function (e) { console.warn("[cloud] loadMembers", e); shareMembers = []; });
+  }
+  // Friendly label for a member — never an internal id.
+  function memberLabel(m) {
+    var p = m.profile || {};
+    return p.display_name || p.email || "Member";
   }
   function inviteByEmail(email, role) {
     if (!email) { toast("Enter an email"); return; }
     sb.rpc("find_profile_by_email", { p_email: email }).then(function (r) {
       var found = (r.data && r.data[0]);
       if (found) {
-        sb.from("trip_members").insert({ trip_id: S.currentTripId, user_id: found.id, role: role })
+        // upsert so re-inviting or changing an existing member's role works
+        // (the previous insert failed with a duplicate-key error on re-invite).
+        sb.from("trip_members").upsert({ trip_id: S.currentTripId, user_id: found.id, role: role }, { onConflict: "trip_id,user_id" })
           .then(function (res) {
             if (res.error) toast("Invite failed: " + res.error.message);
             else { toast("Added " + (found.display_name || email) + " as " + role); loadMembers().then(renderShare); }
@@ -663,8 +671,10 @@
     sb.auth.signOut().then(function () {
       S.user = null; S.profile = null; S.currentTripId = null; S.currentRole = null;
       S.loggingIn = false;  // reset so the next sign-in triggers afterLogin()
+      S.knownUpdatedAt = null; S.pendingRemoteRow = null;
       localStorage.removeItem("cloud-active-trip");
       if (S.channel) { sb.removeChannel(S.channel); S.channel = null; }
+      if (S.memberChannel) { sb.removeChannel(S.memberChannel); S.memberChannel = null; }
       if (window.TripApp) {
         window.TripApp.setReadOnly(false);
         window.TripApp.setActiveKey(null);   // back to the local guest store
@@ -726,40 +736,66 @@
   /* =====================================================================
    *  Boot
    * ===================================================================== */
-  function maybeAcceptInvite() {
+  // The invite token may come from the URL (?invite=) or from localStorage when
+  // a sign-in redirect (magic link / Google) stripped the query string.
+  function getPendingInviteToken() {
     var m = location.search.match(/[?&]invite=([a-f0-9]+)/i);
-    if (!m) return Promise.resolve();
-    var token = m[1];
-    if (!S.user) { toast("Sign in to accept the invitation"); openAuthModal(); return Promise.resolve(); }
+    if (m) return m[1];
+    return localStorage.getItem("pending-invite") || null;
+  }
+  function maybeAcceptInvite() {
+    var token = getPendingInviteToken();
+    if (!token) return Promise.resolve();
+    if (!S.user) {
+      // Persist across the sign-in redirect so the invite isn't lost.
+      localStorage.setItem("pending-invite", token);
+      toast("Sign in to accept the invitation");
+      openAuthModal();
+      return Promise.resolve();
+    }
     return sb.rpc("accept_invite", { p_token: token }).then(function (r) {
+      localStorage.removeItem("pending-invite");
+      history.replaceState({}, "", location.pathname);
       if (r.error) { toast("Invite: " + r.error.message); return; }
       var tripId = r.data;
-      // clean the URL
-      history.replaceState({}, "", location.pathname);
       toast("Invitation accepted ✓");
       return loadTrips().then(function () { if (tripId) openTrip(tripId); });
     });
+  }
+
+  // Realtime: refresh my trips list the instant someone shares a trip with me
+  // (or changes my role), so a shared trip appears without a manual reload.
+  function subscribeMemberships() {
+    if (!uid()) return;
+    if (S.memberChannel) { sb.removeChannel(S.memberChannel); S.memberChannel = null; }
+    S.memberChannel = sb.channel("members:" + uid())
+      .on("postgres_changes", { event: "*", schema: "public", table: "trip_members", filter: "user_id=eq." + uid() }, function () {
+        loadTrips().then(function () { if (S.modal === "trips") renderTrips(); });
+      })
+      .subscribe();
   }
 
   function afterLogin() {
     // onAuthStateChange + getSession() can both fire on load; run only once.
     if (S.loggingIn) return Promise.resolve();
     S.loggingIn = true;
+    var hadInvite = !!getPendingInviteToken();
     return loadProfile().then(function () {
       mountAccountButton();
+      subscribeMemberships();
       return loadTrips();
     }).then(function () {
       return maybeAcceptInvite();
     }).then(function () {
-      var hasInvite = location.search.match(/invite=/);
-      if (S.currentTripId && !hasInvite) {
+      if (hadInvite) return;   // the invite path already opened the right trip
+      if (S.currentTripId) {
         // If the trip can't be found, clear the stale id so we don't loop.
         return openTrip(S.currentTripId).catch(function () {
           S.currentTripId = null;
           localStorage.removeItem("cloud-active-trip");
           maybeOfferImport();
         });
-      } else if (!S.currentTripId && !hasInvite) {
+      } else {
         maybeOfferImport();
       }
     }).catch(function (err) {
@@ -856,8 +892,19 @@
     });
   }
   function maybeAcceptInviteGuest() {
-    if (location.search.match(/invite=/)) { toast("Sign in to accept the invitation"); openAuthModal(); }
+    var token = getPendingInviteToken();
+    if (token) { localStorage.setItem("pending-invite", token); toast("Sign in to accept the invitation"); openAuthModal(); }
   }
+
+  // Bug-6 safety net: while a cloud trip is open, gently reconcile against the
+  // server every 30s. Realtime is primary; this guarantees eventual consistency
+  // even if a realtime event was dropped (mobile suspend, flaky network).
+  setInterval(function () {
+    if (!S.currentTripId) return;
+    if (document.hidden) return;
+    if (window.TripApp && window.TripApp.isEditing()) return;
+    refetchCurrent();
+  }, 30000);
 
   // public bridge for the patched persist()
   window.TripCloud = { enabled: true, onLocalChange: onLocalChange };

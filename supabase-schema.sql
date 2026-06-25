@@ -86,6 +86,21 @@ set search_path = public as $$
   limit 1;
 $$;
 
+-- List members of a trip WITH their display name / email, for any member of
+-- that trip. SECURITY DEFINER so co-members' profiles (hidden by the own-row
+-- profiles RLS) are readable; the is_trip_member gate prevents any leak.
+create or replace function public.list_trip_members(p_trip uuid)
+returns table (user_id uuid, role public.trip_role, display_name text, email text, avatar_url text)
+language sql security definer stable
+set search_path = public as $$
+  select tm.user_id, tm.role, p.display_name, p.email, p.avatar_url
+  from public.trip_members tm
+  left join public.profiles p on p.id = tm.user_id
+  where tm.trip_id = p_trip
+    and public.is_trip_member(p_trip, auth.uid())
+  order by (tm.role = 'owner') desc, p.display_name nulls last;
+$$;
+
 -- Accept an invitation token: add the current user as a member.
 create or replace function public.accept_invite(p_token text)
 returns uuid language plpgsql security definer
@@ -261,5 +276,7 @@ revoke execute on function public.touch_updated_at() from anon, authenticated;
 -- anonymous invite acceptance).
 revoke execute on function public.find_profile_by_email(text) from anon;
 revoke execute on function public.accept_invite(text)         from anon;
+revoke execute on function public.list_trip_members(uuid)     from anon;
+grant  execute on function public.list_trip_members(uuid)     to authenticated;
 
 -- Done.
