@@ -26,6 +26,8 @@ body {
   overscroll-behavior-y: none;
 }
 button { font: inherit; cursor: pointer; color: inherit; background: none; border: 0; padding: 0; }
+/* Remove the double-tap-zoom delay on all controls for a native touch feel. */
+button, a, .pill, .chip, .sec-tab, .jump-item, label[for] { touch-action: manipulation; }
 input, textarea, select { font: inherit; color: inherit; }
 input, textarea { font-size: 16px; }                 /* avoid iOS zoom on focus */
 a { color: inherit; text-decoration: none; }
@@ -202,7 +204,10 @@ a { color: inherit; text-decoration: none; }
 .day-action-chip.danger:hover { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
 
 /* ---------- Trip cover banner — themed artwork near the trip name ---------- */
-.trip-cover-wrap { max-width: 980px; margin: 14px auto 0; padding: 0 16px; }
+/* width:100% makes this a normal block (capped at 980px, centered on desktop)
+   instead of a shrink-to-fit flex item that the banner's nowrap text could grow
+   past the viewport — which caused horizontal scrolling on phones. */
+.trip-cover-wrap { width: 100%; max-width: 980px; margin: 14px auto 0; padding: 0 16px; }
 .cover-banner {
   position: relative; overflow: hidden;
   width: 100%; text-align: left;
@@ -886,6 +891,58 @@ a { color: inherit; text-decoration: none; }
 .app.read-only .brand-title.editable,
 .app.read-only .brand-sub.editable,
 .app.read-only .ov-cal { pointer-events: none; }
+
+/* =========================================================================
+   MOBILE POLISH  —  applies on phones only (≤ 719px). The desktop layout
+   (≥ 720px, handled by the existing min-width:720px rules) is left untouched.
+   Goals: no horizontal scroll, ≥44px touch targets (Apple HIG), landscape
+   safe-area insets, comfortable spacing, smooth momentum scrolling.
+   ========================================================================= */
+@media (max-width: 719px) {
+  /* Never allow a stray element to create sideways scroll. (No overflow:hidden
+     on html/body — that would break the sticky top bar / pills / tabs.) */
+  #root, .app, .day-view, .content, main { max-width: 100%; }
+
+  /* Respect the notch in landscape — keep content clear of the side insets. */
+  .topbar { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .pills, .content, .trip-cover-wrap, .mode-toggle-wrap {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  /* Larger, comfortable touch targets. */
+  .chip { min-height: 40px; padding: 9px 14px; font-size: 13px; }
+  .map-btn { min-height: 46px; }
+  .sec-tab { min-height: 44px; padding: 11px 16px; }
+  .day-action-chip { min-height: 42px; padding: 10px 15px; }
+  .btn-add { min-height: 42px; padding: 11px 16px; }
+  .btn-done { min-height: 46px; }
+  .btn-jump, .btn-info { min-height: 42px; }
+  .btn-icon { width: 40px; height: 40px; }
+  .brand-menu-btn { width: 42px; height: 42px; }
+  .btn-reset { min-height: 40px; padding: 9px 14px; }
+  .title-edit { width: 36px; height: 36px; }
+  .ov-cal { width: 48px; height: 48px; }
+  .sheet-close, .cloud-x { width: 40px; height: 40px; }
+  .icon-cell { height: 52px; }
+  .theme-cell { height: 62px; }
+  .jump-item { padding: 13px 14px; }
+  .cloud-acct { min-height: 40px; }
+
+  /* Smooth, native-feeling momentum scrolling on the page. */
+  body { -webkit-overflow-scrolling: touch; }
+
+  /* A touch more breathing room between cards and sections. */
+  .cards { gap: 12px; }
+  .section-tabs { padding: 5px; gap: 6px; }
+}
+
+/* Landscape phones: trim the big vertical paddings so more fits above the fold. */
+@media (max-width: 926px) and (orientation: landscape) and (max-height: 500px) {
+  .hero, .overview { padding-top: 18px; padding-bottom: 16px; }
+  .pills { padding-top: 10px; padding-bottom: 12px; }
+  .pill { height: 78px; }
+}
 </style>
 </head>
 <body>
