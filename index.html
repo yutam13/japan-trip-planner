@@ -7,6 +7,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="theme-color" content="#0b1020" />
 <title>Japan 2026 — Trip Planner</title>
+<script>
+/* Apply the saved (or system) colour scheme before first paint — no flash. */
+(function () {
+  try {
+    var t = localStorage.getItem("trip-theme-mode");
+    if (!t) t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <style>
 /* =========================================================================
    Reset & base
@@ -44,6 +54,13 @@ a { color: inherit; text-decoration: none; }
   --text-soft: #8a93a6;
   --border: #e7e9ef;
   --border-soft: #f1f3f7;
+  --input-bg: #ffffff;
+  --field-bg: linear-gradient(180deg, #fafbff, #f5f7fc);
+  /* Solid "ink" button (dark in light mode, light in dark mode) so primary
+     buttons keep contrast in both themes. */
+  --ink: #0b1220;
+  --ink-on: #ffffff;
+  --meta-strong: #2b3344;
 
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
   --shadow-md: 0 6px 18px -4px rgba(15, 23, 42, .12), 0 2px 4px rgba(15, 23, 42, .04);
@@ -79,6 +96,72 @@ a { color: inherit; text-decoration: none; }
 .theme-flight { --c-bg: #334155; --c-bg-2: #64748b; --c-soft: #eef1f5; --c-accent: #334155; }
 /* Locations get a distinct teal/cyan theme so they read as a different mode */
 .theme-loc    { --c-bg: #0d9488; --c-bg-2: #5eead4; --c-soft: #effaf6; --c-accent: #0d9488; }
+
+/* =========================================================================
+   DARK MODE  —  toggled from Settings (sets <html data-theme="dark">).
+   Overrides the neutral tokens + the few hardcoded surfaces. Accent colours
+   and the city/cover gradients are kept (they read well on dark).
+   ========================================================================= */
+html[data-theme="dark"] {
+  --bg: #0b1020;
+  --bg-card: #161c2e;
+  --text: #e9ebf2;
+  --text-muted: #aab2c8;
+  --text-soft: #79829a;
+  --border: #283050;
+  --border-soft: #1d2440;
+  --input-bg: #0f1426;
+  --field-bg: #0f1426;
+  --ink: #e9ebf2;
+  --ink-on: #0b1020;
+  --meta-strong: #c8cee0;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .45);
+  --shadow-md: 0 6px 18px -4px rgba(0, 0, 0, .6), 0 2px 4px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 18px 40px -10px rgba(0, 0, 0, .75), 0 4px 10px rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+/* dark-tinted versions of the per-theme soft surfaces */
+html[data-theme="dark"] .theme-tokyo  { --c-soft: #17233f; }
+html[data-theme="dark"] .theme-nagano { --c-soft: #0f2a22; }
+html[data-theme="dark"] .theme-kyoto  { --c-soft: #311920; }
+html[data-theme="dark"] .theme-fuji   { --c-soft: #2e1d12; }
+html[data-theme="dark"] .theme-flight { --c-soft: #1b2236; }
+html[data-theme="dark"] .theme-loc    { --c-soft: #0e2420; }
+html[data-theme="dark"] body { background: var(--bg); }
+/* hardcoded text colours → dark-friendly */
+html[data-theme="dark"] .meta-line,
+html[data-theme="dark"] .meta-line .lab,
+html[data-theme="dark"] .notes-card p,
+html[data-theme="dark"] .info-row .ir-val { color: var(--meta-strong); }
+/* amber note cards */
+html[data-theme="dark"] .tip-card { background: #2a230f; border-color: #5b4a18; }
+html[data-theme="dark"] .tip-card p { color: #f0d990; }
+/* food/price tags */
+html[data-theme="dark"] .tag-cuisine { background: #3a2a17; color: #f3c490; }
+html[data-theme="dark"] .tag-price   { background: #381f30; color: #f1a9cf; }
+html[data-theme="dark"] .tag-visited { background: #123626; color: #6ee7b7; }
+/* chips / soft surfaces */
+html[data-theme="dark"] .chip { background: #1f2740; color: var(--text-muted); }
+html[data-theme="dark"] .chip:hover { background: #29335a; color: var(--text); }
+html[data-theme="dark"] .chip.danger { background: #3a1d1d; color: #fca5a5; }
+html[data-theme="dark"] .chip.is-on { background: #123626; color: #6ee7b7; }
+html[data-theme="dark"] .btn-icon { background: #1f2740; color: var(--text-muted); }
+html[data-theme="dark"] .day-action-chip { background: var(--bg-card); }
+html[data-theme="dark"] .pill { background: var(--bg-card); border-color: #283050; }
+html[data-theme="dark"] .topbar { background: rgba(11, 16, 32, .82); }
+html[data-theme="dark"] .mode-toggle { background: var(--bg-card); }
+/* form fields */
+html[data-theme="dark"] .input, html[data-theme="dark"] .textarea { background: var(--input-bg); color: var(--text); }
+html[data-theme="dark"] .form-block { background: var(--field-bg); border-color: var(--border); }
+/* cloud (auth / trips / share) modals */
+html[data-theme="dark"] .cloud-sheet { background: var(--bg-card); color: var(--text); }
+html[data-theme="dark"] .cloud-input { background: var(--input-bg); color: var(--text); border-color: var(--border); }
+html[data-theme="dark"] .cloud-tabs, html[data-theme="dark"] .cloud-btn.ghost { background: #1f2740; color: var(--text); }
+html[data-theme="dark"] .cloud-tab.on { background: var(--bg-card); color: var(--text); }
+html[data-theme="dark"] .cloud-x { background: #1f2740; color: var(--text-muted); }
+html[data-theme="dark"] .trip-card, html[data-theme="dark"] .jump-item { background: var(--input-bg); border-color: var(--border); }
+html[data-theme="dark"] .trip-card.cur, html[data-theme="dark"] .jump-item.cur { background: #17233f; }
+html[data-theme="dark"] .cloud-acct { background: var(--bg-card); }
 
 /* ---------- Sheet-style modal (Apple-style bottom sheet on mobile, centered on desktop) ---------- */
 .sheet-scrim {
@@ -184,6 +267,18 @@ a { color: inherit; text-decoration: none; }
 }
 .brand-menu-btn:hover { background: var(--border-soft); }
 .brand-menu-btn:active { transform: scale(.94); }
+/* Brand is a button (single trip-edit entry). */
+.brand { text-align: left; border-radius: 12px; transition: transform .1s ease; }
+.brand:active { transform: scale(.99); }
+.settings-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg-card); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  transition: background .15s, transform .2s ease, box-shadow .15s, color .15s;
+}
+.settings-btn:hover { background: var(--border-soft); color: var(--text); }
+.settings-btn:active { transform: scale(.92) rotate(45deg); }
 .topbar-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 
 /* ---------- Day actions row (small inline action group in the day overview) ---------- */
@@ -216,12 +311,7 @@ a { color: inherit; text-decoration: none; }
   padding: 16px 18px; min-height: 92px;
   display: flex; align-items: center; gap: 14px;
   box-shadow: var(--shadow-md);
-  cursor: pointer;
-  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
-  animation: cardIn .35s ease both;
 }
-.cover-banner:hover { filter: brightness(1.04); box-shadow: var(--shadow-lg); }
-.cover-banner:active { transform: scale(.99); }
 .cover-banner::after {
   content: ""; position: absolute; inset: 0;
   background: radial-gradient(circle at 0% 0%, rgba(255,255,255,.22), transparent 45%),
@@ -265,15 +355,29 @@ a { color: inherit; text-decoration: none; }
 /* ---------- Feature 1: Day info card ---------- */
 .info-card {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
-  padding: 14px 16px; margin-bottom: 18px; box-shadow: var(--shadow-sm);
-  animation: cardIn .3s ease both;
+  padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm);
 }
-.info-card .info-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.info-card .info-head h4 { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.info-card .info-head {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; cursor: pointer; -webkit-user-select: none; user-select: none;
+}
+.info-card .info-head h4 { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); display: inline-flex; align-items: center; gap: 7px; }
+.info-card .info-count { font-size: 11px; font-weight: 800; background: var(--border-soft); color: var(--text-muted); border-radius: 999px; padding: 2px 8px; }
+.info-card .info-head-right { display: inline-flex; align-items: center; gap: 8px; }
+.info-card .info-chevron { font-size: 18px; color: var(--text-soft); transition: transform .3s cubic-bezier(.4,0,.2,1); line-height: 1; }
+.info-card.open .info-chevron { transform: rotate(180deg); }
+/* Collapsible body — animates real height via grid-template-rows (0fr→1fr),
+   which is far more reliable than max-height transitions across engines. */
+.info-card .info-body {
+  display: grid; grid-template-rows: 0fr; opacity: 0;
+  transition: grid-template-rows .32s cubic-bezier(.4,0,.2,1), opacity .25s ease, margin-top .3s ease;
+}
+.info-card .info-rows { overflow: hidden; min-height: 0; }
+.info-card.open .info-body { grid-template-rows: 1fr; opacity: 1; margin-top: 8px; }
 .info-row { display: flex; gap: 8px; align-items: baseline; font-size: 14px; padding: 4px 0; line-height: 1.45; }
 .info-row .ir-emoji { flex: 0 0 auto; }
 .info-row .ir-lab { font-weight: 700; color: var(--text-muted); flex: 0 0 auto; }
-.info-row .ir-val { color: #2b3344; min-width: 0; word-break: break-word; }
+.info-row .ir-val { color: var(--meta-strong); min-width: 0; word-break: break-word; }
 .btn-info {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 14px; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 700;
@@ -299,7 +403,7 @@ a { color: inherit; text-decoration: none; }
 }
 .sec-tab:active { transform: scale(.97); }
 .sec-tab .st-count { font-size: 11px; font-weight: 800; opacity: .7; }
-.sec-tab.is-active { background: var(--text); color: #fff; }
+.sec-tab.is-active { background: var(--ink); color: var(--ink-on); }
 .sec-tab.is-active .st-count { opacity: .85; }
 .section-panels { position: relative; }
 .section-panel { display: none; animation: panelIn .25s ease both; }
@@ -334,6 +438,56 @@ a { color: inherit; text-decoration: none; }
 .jump-item .ji-title { font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jump-item .ji-sub { font-size: 12px; color: var(--text-soft); }
 .jump-item .ji-emoji { font-size: 20px; }
+
+/* ---------- Settings sheet ---------- */
+.set-group { margin-bottom: 18px; }
+.set-label { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-soft); margin: 0 4px 8px; }
+.seg { display: flex; gap: 4px; background: var(--border-soft); border-radius: var(--r-pill); padding: 4px; }
+.seg-btn {
+  flex: 1; text-align: center; padding: 11px 8px; border-radius: var(--r-pill);
+  font-size: 13.5px; font-weight: 700; color: var(--text-muted);
+  transition: background .18s, color .18s, transform .1s; min-height: 44px;
+}
+.seg-btn:active { transform: scale(.97); }
+.seg-btn.is-on { background: var(--bg-card); color: var(--text); box-shadow: var(--shadow-sm); }
+.set-row {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  padding: 14px 14px; border-radius: 14px; background: var(--bg-card);
+  border: 1px solid var(--border); margin-bottom: 8px; min-height: 52px;
+  font-size: 15px; font-weight: 600; color: var(--text);
+  transition: background .15s, transform .1s;
+}
+.set-row:hover { background: var(--border-soft); }
+.set-row:active { transform: scale(.99); }
+.set-row .sr-main { display: inline-flex; align-items: center; gap: 10px; }
+.set-row .sr-ic { font-size: 18px; }
+.set-row .set-chev { color: var(--text-soft); font-size: 20px; font-weight: 400; }
+.set-row.danger { color: #b91c1c; }
+html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
+.set-about { font-size: 13px; color: var(--text-muted); line-height: 1.5; padding: 2px 4px; }
+
+/* ---------- New section control (now at the top, with icon picker) ---------- */
+.sections-top { margin: 0 0 12px; }
+.btn-newsection-top {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 15px; border-radius: var(--r-pill); min-height: 40px;
+  font-size: 13px; font-weight: 700;
+  background: var(--violet); color: #fff;
+  box-shadow: 0 6px 16px -8px rgba(124, 92, 255, .6);
+  transition: filter .15s, transform .1s;
+}
+.btn-newsection-top:hover { filter: brightness(1.06); }
+.btn-newsection-top:active { transform: scale(.97); }
+.new-section-row { display: flex; gap: 8px; align-items: stretch; }
+.new-section-row .input { flex: 1; }
+.icon-pick-sq {
+  flex: 0 0 auto; width: 48px; border-radius: 12px;
+  background: var(--input-bg); border: 1px solid var(--border);
+  font-size: 22px; display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s, transform .1s, border-color .15s;
+}
+.icon-pick-sq:hover { background: var(--border-soft); border-color: #c8cdda; }
+.icon-pick-sq:active { transform: scale(.95); }
 
 /* ---------- Add Day pill (in days mode) ---------- */
 .pill.add-pill-day {
@@ -583,7 +737,7 @@ a { color: inherit; text-decoration: none; }
 .btn-done {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 11px 18px; border-radius: var(--r-pill);
-  background: var(--text); color: white;
+  background: var(--ink); color: var(--ink-on);
   font-size: 13px; font-weight: 700;
   box-shadow: 0 8px 18px -8px rgba(11, 18, 32, .55);
   transition: background .15s, transform .1s, filter .15s;
@@ -774,8 +928,8 @@ a { color: inherit; text-decoration: none; }
 .map-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 44px; padding: 0 18px; border-radius: var(--r-pill);
-  background: var(--text);
-  color: white; font-size: 13px; font-weight: 700;
+  background: var(--ink);
+  color: var(--ink-on); font-size: 13px; font-weight: 700;
   letter-spacing: .01em; white-space: nowrap;
   box-shadow: 0 8px 18px -8px rgba(11, 18, 32, .55), 0 2px 4px rgba(0,0,0,.08);
   transition: transform .1s ease, filter .15s ease, box-shadow .15s ease;
@@ -786,8 +940,8 @@ a { color: inherit; text-decoration: none; }
 
 /* Forms */
 .form-block {
-  background: linear-gradient(180deg, #fafbff, #f5f7fc);
-  border: 1px dashed #c8cfdd;
+  background: var(--field-bg);
+  border: 1px dashed var(--border);
   border-radius: var(--r-md);
   padding: 14px;
   margin-bottom: 12px;
@@ -798,7 +952,7 @@ a { color: inherit; text-decoration: none; }
 .input, .textarea {
   width: 100%; display: block;
   padding: 10px 12px; border: 1px solid var(--border);
-  border-radius: 10px; background: white;
+  border-radius: 10px; background: var(--input-bg);
   transition: border-color .15s, box-shadow .15s;
 }
 .input:focus, .textarea:focus {
@@ -873,8 +1027,6 @@ a { color: inherit; text-decoration: none; }
 .app.read-only .add-pill-day,
 .app.read-only .add-pill,
 .app.read-only .section-tools,
-.app.read-only .btn-reset,
-.app.read-only .brand-menu-btn,
 .app.read-only .btn-done,
 .app.read-only .day-action-chip,
 .app.read-only .chip[data-action="edit"],
@@ -884,12 +1036,10 @@ a { color: inherit; text-decoration: none; }
 .app.read-only .chip[data-action="edit-loc-r"],
 .app.read-only .chip[data-action="edit-loc-c"],
 .app.read-only .chip[data-action^="delete"],
-.app.read-only .chip[data-action^="toggle-visited"],
-.app.read-only .cover-banner { pointer-events: none; }
-.app.read-only .cover-banner .cb-edit { display: none; }
+.app.read-only .chip[data-action^="toggle-visited"] { pointer-events: none; }
 .app.read-only .info-card .btn-icon { display: none; }
-.app.read-only .brand-title.editable,
-.app.read-only .brand-sub.editable,
+/* Viewer can't edit the trip; the brand opens the edit sheet, so disable it. */
+.app.read-only .brand,
 .app.read-only .ov-cal { pointer-events: none; }
 
 /* =========================================================================
@@ -932,9 +1082,37 @@ a { color: inherit; text-decoration: none; }
   /* Smooth, native-feeling momentum scrolling on the page. */
   body { -webkit-overflow-scrolling: touch; }
 
-  /* A touch more breathing room between cards and sections. */
-  .cards { gap: 12px; }
   .section-tabs { padding: 5px; gap: 6px; }
+
+  /* Item 3 — more compact place cards (smaller hero strip, tighter body) so
+     more content fits, while keeping the modern look + readability. */
+  .cards { gap: 10px; }
+  .card { border-radius: 18px; }
+  .card-hero { height: 56px; padding: 0 16px; }
+  .card-hero .hero-emoji { font-size: 30px; }
+  .card-hero .hero-pattern { font-size: 92px; bottom: -22px; right: -16px; }
+  .card-badge { top: 10px; right: 10px; padding: 4px 9px; font-size: 10px; letter-spacing: .08em; }
+  .card-body { padding: 12px 14px 13px; gap: 7px; }
+  .card-name { font-size: 15.5px; }
+  .card-desc { font-size: 13px; margin-top: 2px; }
+  .meta-line { font-size: 13px; }
+  .card-footer { margin-top: 2px; }
+
+  /* Item 7 — day-selection pills: a little larger + better balanced for touch
+     (same navigation mechanism, just more prominent). */
+  .pill { width: 82px; height: 98px; border-radius: 20px; }
+  .pill .num-big { font-size: 32px; }
+  .pill .num-label { font-size: 11.5px; }
+  .pill.is-active { transform: translateY(-1px) scale(1.03); }
+
+  /* Item 4 — more compact day overview card. */
+  .overview { margin: 14px 16px 0; padding: 16px 18px 14px; border-radius: 18px; }
+  .overview h2 { font-size: 21px; margin: 8px 0 4px; }
+  .overview .ov-label { font-size: 11px; }
+  .overview .ov-sub { font-size: 13px; }
+  .overview .ov-cal { width: 44px; height: 44px; font-size: 20px; }
+  .overview .ov-actions { margin-top: 12px; }
+  .overview .day-actions-row { margin-top: 8px; }
 }
 
 /* Landscape phones: trim the big vertical paddings so more fits above the fold. */
@@ -1425,7 +1603,9 @@ a { color: inherit; text-decoration: none; }
       renamingSection: null,    // section id being renamed
       renamingTitle: null,      // "day" | "location" | "trip-title" | "trip-sub" — inline rename
       iconPicker: null,         // { target: "day"|"section:<id>"|"item:<kind>:<id>"|..., currentIcon: string } or null
-      activeSectionTab: 0       // Feature 2: which section tab (panel) is visible
+      activeSectionTab: 0,      // Feature 2: which section tab (panel) is visible
+      dayInfoExpanded: false,   // Item 5: is the Day info block expanded
+      newSectionIcon: ""        // chosen icon while creating a new section
     };
   })();
 
@@ -1557,15 +1737,12 @@ a { color: inherit; text-decoration: none; }
         '</div>' +
         '<div class="ov-actions">' +
           '<button class="btn-done ' + doneOn + '" data-action="toggle-done">' + doneLabel + '</button>' +
-          (state.days.length > 1 ? '<button class="btn-jump" data-action="open-jump">🗓️ Jump to day</button>' : '') +
         '</div>' +
+        // Compact quick actions. Duplicate / Move / Delete live in "Edit details".
         '<div class="day-actions-row">' +
+          '<button class="day-action-chip" data-action="open-edit-day">⚙️ Edit</button>' +
           '<button class="day-action-chip" data-action="open-day-info">ℹ️ Info</button>' +
-          '<button class="day-action-chip" data-action="open-edit-day">⚙️ Edit details</button>' +
-          '<button class="day-action-chip" data-action="duplicate-day">⧉ Duplicate</button>' +
-          (canMoveUp ? '<button class="day-action-chip" data-action="move-day-up">↑ Move up</button>' : '') +
-          (canMoveDown ? '<button class="day-action-chip" data-action="move-day-down">↓ Move down</button>' : '') +
-          (canDelete ? '<button class="day-action-chip danger" data-action="delete-day">🗑️ Delete day</button>' : '') +
+          (state.days.length > 1 ? '<button class="day-action-chip" data-action="open-jump">🗓️ Days</button>' : '') +
         '</div>' +
       '</section>'
     );
@@ -1703,7 +1880,7 @@ a { color: inherit; text-decoration: none; }
     return (
       '<section class="section kind-custom">' +
         '<div class="section-head">' +
-          '<h3><span class="icon">✨</span> ' + esc(section.label) + ' <span class="count">' + items.length + '</span></h3>' +
+          '<h3><span class="icon">' + (section.icon || "✨") + '</span> ' + esc(section.label) + ' <span class="count">' + items.length + '</span></h3>' +
           '<div class="section-tools">' +
             '<button class="btn-add cust" data-action="add-loc-custom" data-section-id="' + esc(section.id) + '" data-section-label="' + esc(section.label) + '">+ Add</button>' +
           '</div>' +
@@ -1724,12 +1901,11 @@ a { color: inherit; text-decoration: none; }
     ];
     state.customSections.forEach(function (sec) {
       var c = (loc.customItems && loc.customItems[sec.id]) ? loc.customItems[sec.id].length : 0;
-      panels.push({ label: sec.label, icon: "✨", count: c, html: renderLocationCustomSection(sec, loc) });
+      panels.push({ label: sec.label, icon: sec.icon || "✨", count: c, html: renderLocationCustomSection(sec, loc) });
     });
     return (
       '<div class="content">' +
-        renderTabbedSections(panels) +
-        renderNewSectionForm() +
+        renderTabbedSections(panels, renderNewSectionForm()) +
       '</div>'
     );
   }
@@ -2070,7 +2246,7 @@ a { color: inherit; text-decoration: none; }
             '<button type="submit" class="btn-primary">Save</button>' +
             '<button type="button" class="btn-secondary" data-action="cancel-rename">Cancel</button>' +
          '</form>')
-      : ('<h3><span class="icon">✨</span> ' + esc(section.label) + ' <span class="count">' + items.length + '</span></h3>');
+      : ('<h3><span class="icon">' + (section.icon || "✨") + '</span> ' + esc(section.label) + ' <span class="count">' + items.length + '</span></h3>');
     var tools = renaming ? '' :
       '<div class="section-tools">' +
         '<button class="btn-add cust" data-action="add-custom" data-section-id="' + esc(section.id) + '" data-section-label="' + esc(section.label) + '">+ Add</button>' +
@@ -2094,11 +2270,13 @@ a { color: inherit; text-decoration: none; }
 
   function renderNewSectionForm() {
     if (state.adding === "__new_section__") {
+      var icon = state.newSectionIcon || "✨";
       return (
-        '<form class="form-block" data-form="new-section" autocomplete="off" style="margin-top:14px;">' +
+        '<form class="form-block new-section-top" data-form="new-section" autocomplete="off">' +
           '<h4>New section</h4>' +
-          '<div class="form-grid">' +
-            '<input class="input" name="label" required placeholder="Section name (e.g. Bars, Onsens, Shopping)" autofocus>' +
+          '<div class="new-section-row">' +
+            '<button type="button" class="icon-pick-sq" data-action="open-icon-picker" data-target="new-section" aria-label="Choose section icon">' + icon + '</button>' +
+            '<input class="input" name="label" required placeholder="Section name (e.g. Bars, Onsens)" autofocus>' +
           '</div>' +
           '<div class="form-actions">' +
             '<button type="submit" class="btn-primary">Create section</button>' +
@@ -2107,12 +2285,8 @@ a { color: inherit; text-decoration: none; }
         '</form>'
       );
     }
-    return (
-      '<div class="footer-tools">' +
-        '<button class="btn-newsection" data-action="open-new-section">+ New section (e.g. Bars)</button>' +
-        '<p class="footer-help">New sections appear on every day, so you can fill in items per-day.</p>' +
-      '</div>'
-    );
+    // Compact button at the TOP, integrated with the section controls.
+    return '<button class="btn-newsection-top" data-action="open-new-section">＋ New section</button>';
   }
 
   function renderDayContent(day) {
@@ -2133,14 +2307,13 @@ a { color: inherit; text-decoration: none; }
     ];
     state.customSections.forEach(function (sec) {
       var c = (day.customItems && day.customItems[sec.id]) ? day.customItems[sec.id].length : 0;
-      panels.push({ label: sec.label, icon: "✨", count: c, html: renderCustomSection(sec, day) });
+      panels.push({ label: sec.label, icon: sec.icon || "✨", count: c, html: renderCustomSection(sec, day) });
     });
     return (
       '<div class="content">' +
         noteBlock +
         renderDayInfoCard(day) +
-        renderTabbedSections(panels) +
-        renderNewSectionForm() +
+        renderTabbedSections(panels, renderNewSectionForm()) +
       '</div>'
     );
   }
@@ -2152,19 +2325,31 @@ a { color: inherit; text-decoration: none; }
   ];
   function renderDayInfoCard(day) {
     var info = day.info || {};
-    var rows = DAY_INFO_FIELDS.filter(function (f) { return info[f[0]] && String(info[f[0]]).trim(); })
-      .map(function (f) {
-        return '<div class="info-row"><span class="ir-emoji">' + f[1] + '</span><span class="ir-lab">' + f[2] + ':</span><span class="ir-val">' + esc(info[f[0]]) + '</span></div>';
-      }).join("");
-    if (!rows) return "";   // empty → the "ℹ️ Info" button in the day header adds it
-    return '<div class="info-card"><div class="info-head"><h4>Day info</h4>' +
-      '<button class="btn-icon" data-action="open-day-info" title="Edit day info" aria-label="Edit day info">✏️</button></div>' + rows + '</div>';
+    var filled = DAY_INFO_FIELDS.filter(function (f) { return info[f[0]] && String(info[f[0]]).trim(); });
+    if (!filled.length) return "";   // empty → the "ℹ️ Info" button in the day header adds it
+    var rows = filled.map(function (f) {
+      return '<div class="info-row"><span class="ir-emoji">' + f[1] + '</span><span class="ir-lab">' + f[2] + ':</span><span class="ir-val">' + esc(info[f[0]]) + '</span></div>';
+    }).join("");
+    var open = !!state.dayInfoExpanded;
+    // Collapsible: only the header shows by default; tapping it smoothly expands.
+    return '<div class="info-card' + (open ? " open" : "") + '">' +
+      '<div class="info-head" data-action="toggle-day-info" role="button" tabindex="0" aria-expanded="' + open + '">' +
+        '<h4>Day info <span class="info-count">' + filled.length + '</span></h4>' +
+        '<span class="info-head-right">' +
+          '<button class="btn-icon" data-action="open-day-info" title="Edit day info" aria-label="Edit day info">✏️</button>' +
+          '<span class="info-chevron" aria-hidden="true">⌄</span>' +
+        '</span>' +
+      '</div>' +
+      '<div class="info-body"><div class="info-rows">' + rows + '</div></div>' +
+    '</div>';
   }
 
-  /* Feature 2 — section tab bar + swipeable one-at-a-time panels. */
-  function renderTabbedSections(panels) {
+  /* Feature 2 — section tab bar + swipeable one-at-a-time panels.
+     topControl (the "+ New section" button/form) sits above the tabs. */
+  function renderTabbedSections(panels, topControl) {
     if (!panels.length) return "";
     var active = Math.max(0, Math.min(state.activeSectionTab || 0, panels.length - 1));
+    var top = topControl ? '<div class="sections-top">' + topControl + '</div>' : "";
     var tabs = '<div class="section-tabs" id="section-tabs">' + panels.map(function (p, i) {
       return '<button class="sec-tab' + (i === active ? " is-active" : "") + '" data-action="section-tab" data-idx="' + i + '">' +
         '<span class="st-icon" aria-hidden="true">' + p.icon + '</span> ' + esc(p.label) +
@@ -2174,7 +2359,7 @@ a { color: inherit; text-decoration: none; }
     var body = '<div class="section-panels" id="section-panels">' + panels.map(function (p, i) {
       return '<div class="section-panel' + (i === active ? " is-active" : "") + '">' + p.html + '</div>';
     }).join("") + '</div>';
-    return tabs + hint + body;
+    return top + tabs + hint + body;
   }
 
   /* =========================================================================
@@ -2349,6 +2534,46 @@ a { color: inherit; text-decoration: none; }
     );
   }
 
+  /* Item 8 — Settings sheet (Appearance / Trip / About). */
+  function getThemeMode() {
+    try { return localStorage.getItem("trip-theme-mode") || "system"; } catch (e) { return "system"; }
+  }
+  function applyThemeMode(mode) {
+    try { localStorage.setItem("trip-theme-mode", mode); } catch (e) {}
+    var t = mode === "system"
+      ? ((window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light")
+      : mode;
+    document.documentElement.setAttribute("data-theme", t);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", t === "dark" ? "#0b1020" : "#ffffff");
+  }
+  function renderSettingsSheet() {
+    if (state.adding !== "__settings__") return "";
+    var mode = getThemeMode();
+    var seg = [["light", "☀️ Light"], ["dark", "🌙 Dark"], ["system", "⚙︎ Auto"]].map(function (m) {
+      return '<button class="seg-btn' + (mode === m[0] ? " is-on" : "") + '" data-action="set-theme-mode" data-mode="' + m[0] + '">' + m[1] + '</button>';
+    }).join("");
+    return (
+      '<div class="sheet-scrim" data-action="close-sheet">' +
+        '<div class="sheet">' +
+          '<div class="sheet-handle" aria-hidden="true"></div>' +
+          '<div class="sheet-header"><h3 class="sheet-title">Settings</h3>' +
+            '<button class="sheet-close" data-action="cancel-form" aria-label="Close">✕</button></div>' +
+          '<div class="set-group"><div class="set-label">Appearance</div>' +
+            '<div class="seg">' + seg + '</div>' +
+          '</div>' +
+          '<div class="set-group"><div class="set-label">Trip</div>' +
+            '<button class="set-row" data-action="open-edit-trip"><span class="sr-main"><span class="sr-ic">✏️</span> Edit trip details</span><span class="set-chev">›</span></button>' +
+            '<button class="set-row danger" data-action="reset"><span class="sr-main"><span class="sr-ic">♻️</span> Reset to a clean trip</span><span class="set-chev">›</span></button>' +
+          '</div>' +
+          '<div class="set-group"><div class="set-label">About</div>' +
+            '<div class="set-about">Trip Planner — a fast, mobile-first travel planner. Works offline; signs in to sync &amp; share when you want it.</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function renderModeToggle() {
     var dActive = state.mode === "days" ? " is-active mode-days" : "";
     var lActive = state.mode === "locations" ? " is-active mode-locations" : "";
@@ -2377,15 +2602,16 @@ a { color: inherit; text-decoration: none; }
   function renderCoverBanner(t) {
     var theme = getTheme(t.theme);
     var heading = esc(t.headline || t.title || "Your trip");
-    var sub = t.cover ? esc(t.cover) : (t.subtitle ? esc(t.subtitle) : "Tap to add a description &amp; choose a cover");
+    var sub = t.cover ? esc(t.cover) : (t.subtitle ? esc(t.subtitle) : "");
+    // Decorative only — trip editing is reached from the top-left brand.
     return (
       '<div class="trip-cover-wrap">' +
-        '<button class="cover-banner" data-action="open-edit-trip" style="background:' + theme.g + '" aria-label="Edit trip cover">' +
+        '<div class="cover-banner" style="background:' + theme.g + '">' +
           '<span class="cb-motif" aria-hidden="true">' + theme.emoji + '</span>' +
           '<span class="cb-motif-ghost" aria-hidden="true">' + theme.emoji + '</span>' +
-          '<span class="cb-text"><span class="cb-title">' + heading + '</span><span class="cb-sub">' + sub + '</span></span>' +
-          '<span class="cb-edit" aria-hidden="true">✏️</span>' +
-        '</button>' +
+          '<span class="cb-text"><span class="cb-title">' + heading + '</span>' +
+            (sub ? '<span class="cb-sub">' + sub + '</span>' : '') + '</span>' +
+        '</div>' +
       '</div>'
     );
   }
@@ -2398,16 +2624,18 @@ a { color: inherit; text-decoration: none; }
     var html =
       '<div class="app has-toggle' + (__readOnly ? ' read-only' : '') + '">' +
         '<header class="topbar">' +
-          '<div class="brand">' +
+          // Top-left brand is the single entry point for editing trip details.
+          '<button class="brand" data-action="open-edit-trip" title="Edit trip details" aria-label="Edit trip details">' +
             '<div class="brand-mark" aria-hidden="true" style="background:' + theme.g + '">' + theme.emoji + '</div>' +
             '<div class="brand-text">' +
-              '<div class="brand-title editable" data-action="open-edit-trip" title="Edit trip details">' + esc(t.title || "Trip") + '</div>' +
-              '<div class="brand-sub editable" data-action="open-edit-trip">' + esc(t.subtitle || "") + '</div>' +
+              '<div class="brand-title">' + esc(t.title || "Trip") + '</div>' +
+              '<div class="brand-sub">' + esc(t.subtitle || "") + '</div>' +
             '</div>' +
-          '</div>' +
+          '</button>' +
           '<div class="topbar-right">' +
-            '<button class="brand-menu-btn" data-action="open-edit-trip" title="Edit trip details" aria-label="Edit trip details">✏️</button>' +
-            '<button class="btn-reset" data-action="reset">Reset</button>' +
+            '<button class="settings-btn" data-action="open-settings" title="Settings" aria-label="Settings">' +
+              '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' +
+            '</button>' +
           '</div>' +
         '</header>' +
         renderModeToggle() +
@@ -2418,13 +2646,22 @@ a { color: inherit; text-decoration: none; }
         renderIconPickerSheet() +
         renderDayInfoSheet() +
         renderJumpSheet() +
+        renderSettingsSheet() +
       '</div>';
-    document.getElementById("root").innerHTML = html;
 
-    // Scroll the active pill into view
+    // Preserve scroll position across the full re-render (no jump to top).
+    var prevScroll = window.scrollY || window.pageYOffset || 0;
+    document.getElementById("root").innerHTML = html;
+    window.scrollTo(0, prevScroll);
+
+    // Keep the active pill in view, but only nudge it when it's actually off-screen
+    // (avoids the strip jiggling on every keystroke / state change).
     var activePill = document.querySelector(".pill.is-active");
     if (activePill) {
-      activePill.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+      var pr = activePill.getBoundingClientRect();
+      if (pr.left < 4 || pr.right > window.innerWidth - 4) {
+        activePill.scrollIntoView({ block: "nearest", inline: "center" });
+      }
     }
   }
 
@@ -2436,10 +2673,25 @@ a { color: inherit; text-decoration: none; }
     if (!t) return;
     var action = t.dataset.action;
 
+    if (action === "toggle-day-info") {
+      // Toggle directly on the live element so the CSS height transition animates
+      // (a full re-render would snap straight to the final state). State is kept
+      // so later renders preserve the open/closed choice.
+      state.dayInfoExpanded = !state.dayInfoExpanded;
+      var card = document.querySelector(".info-card");
+      if (card) {
+        card.classList.toggle("open", state.dayInfoExpanded);
+        var head = card.querySelector(".info-head");
+        if (head) head.setAttribute("aria-expanded", state.dayInfoExpanded);
+      }
+      return;
+    }
+
     if (action === "select-day") {
       state.selectedDayId = t.dataset.dayId;
       state.adding = null; state.editing = null; state.renamingSection = null;
       state.activeSectionTab = 0;   // reset section tab when changing day
+      state.dayInfoExpanded = false; // collapse day info on day change
       persist();
       render();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -2460,7 +2712,7 @@ a { color: inherit; text-decoration: none; }
     if (action === "open-jump") { state.adding = "__jump__"; state.editing = null; render(); return; }
     if (action === "jump-day") {
       state.selectedDayId = t.dataset.dayId;
-      state.adding = null; state.editing = null; state.activeSectionTab = 0;
+      state.adding = null; state.editing = null; state.activeSectionTab = 0; state.dayInfoExpanded = false;
       persist(); render();
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -2520,7 +2772,7 @@ a { color: inherit; text-decoration: none; }
     }
 
     /* Custom sections */
-    if (action === "open-new-section") { state.adding = "__new_section__"; state.editing = null; render(); return; }
+    if (action === "open-new-section") { state.adding = "__new_section__"; state.editing = null; state.newSectionIcon = ""; render(); return; }
     if (action === "rename-section") { state.renamingSection = t.dataset.sectionId; render(); return; }
     if (action === "cancel-rename") { state.renamingSection = null; render(); return; }
     if (action === "delete-section") {
@@ -2659,6 +2911,10 @@ a { color: inherit; text-decoration: none; }
     /* Trip-level edit */
     if (action === "open-edit-trip") { state.adding = "__edit_trip__"; state.editing = null; state.renamingTitle = null; state.iconPicker = null; render(); return; }
 
+    /* Settings + dark mode */
+    if (action === "open-settings") { state.adding = "__settings__"; state.editing = null; state.iconPicker = null; render(); return; }
+    if (action === "set-theme-mode") { applyThemeMode(t.dataset.mode); render(); return; }
+
     if (action === "set-theme") {
       state.trip = state.trip || Object.assign({}, defaultTrip);
       // Preserve any text the user already typed in the open trip form before re-render.
@@ -2747,22 +3003,27 @@ a { color: inherit; text-decoration: none; }
 
     /* Icon picker */
     if (action === "open-icon-picker") {
-      var target = t.dataset.target;     // "day" | "section:<id>" | "item:<kind>:<id>" | ...
+      var target = t.dataset.target;     // "day" | "new-section" | "section:<id>" | ...
       var currentIcon = "";
       if (target === "day") {
         var d0 = getSelectedDay();
         currentIcon = (d0 && d0.icon) || cityIcon[d0 && d0.city] || "";
+      } else if (target === "new-section") {
+        currentIcon = state.newSectionIcon || "";
+      } else if (target.indexOf("section:") === 0) {
+        var s0 = state.customSections.find(function (s) { return s.id === target.slice(8); });
+        currentIcon = (s0 && s0.icon) || "";
       }
       state.iconPicker = { target: target, currentIcon: currentIcon };
       render();
       return;
     }
     if (action === "close-sheet") {
-      // Only close if the user clicked DIRECTLY on the scrim or the close button,
-      // not if the click bubbled up from inner sheet content.
+      // Only close if the user clicked DIRECTLY on the scrim or the close button.
       if (e.target === t) {
-        state.iconPicker = null;
-        state.adding = null; state.editing = null; state.renamingTitle = null;
+        // If the icon picker is open on top of another sheet, close only the picker.
+        if (state.iconPicker) { state.iconPicker = null; }
+        else { state.adding = null; state.editing = null; state.renamingTitle = null; }
         render();
       }
       return;
@@ -2796,7 +3057,19 @@ a { color: inherit; text-decoration: none; }
       updateSelectedDay(function (d) { d.icon = icon; });
       return;
     }
-    // Future: section:<id>, item:<kind>:<id>
+    if (target === "new-section") {
+      // Hold the chosen icon until the new section is created; keep the form open.
+      state.newSectionIcon = icon;
+      state.adding = "__new_section__";
+      render();
+      return;
+    }
+    if (target.indexOf("section:") === 0) {
+      var sid = target.slice("section:".length);
+      state.customSections = state.customSections.map(function (s) { return s.id === sid ? Object.assign({}, s, { icon: icon }) : s; });
+      persist(); render();
+      return;
+    }
   }
 
   document.addEventListener("submit", function (e) {
@@ -2885,8 +3158,12 @@ a { color: inherit; text-decoration: none; }
     }
     if (kind === "new-section") {
       if (!data.label) return;
-      state.customSections = state.customSections.concat([{ id: newId(), label: data.label }]);
-      state.adding = null; persist(); render();
+      var newSec = { id: newId(), label: data.label, icon: state.newSectionIcon || "✨" };
+      state.customSections = state.customSections.concat([newSec]);
+      state.newSectionIcon = "";
+      state.adding = null;
+      state.activeSectionTab = 2 + (state.customSections.length - 1);  // focus the new section's tab
+      persist(); render();
       return;
     }
     if (kind === "rename-section") {
@@ -2900,16 +3177,15 @@ a { color: inherit; text-decoration: none; }
     /* Day title rename */
     if (kind === "rename-day-title") {
       if (!data.title) return;
+      state.renamingTitle = null;   // clear before the render inside updateSelectedDay()
       updateSelectedDay(function (d) { d.title = data.title; });
-      state.renamingTitle = null;
-      // updateSelectedDay already called render()
       return;
     }
     /* Location title rename */
     if (kind === "rename-location-title") {
       if (!data.title) return;
+      state.renamingTitle = null;   // clear before the render inside updateSelectedLocation()
       updateSelectedLocation(function (l) { l.name = data.title; });
-      state.renamingTitle = null;
       return;
     }
     /* Location notes */
@@ -2936,6 +3212,9 @@ a { color: inherit; text-decoration: none; }
     /* Edit day (all fields at once) */
     if (kind === "edit-day") {
       if (!data.title) return;
+      // Clear the open-sheet flag BEFORE updateSelectedDay() renders, otherwise
+      // the render still shows the sheet and it takes a second Save to close it.
+      state.adding = null;
       updateSelectedDay(function (d) {
         d.title = data.title;
         d.date = data.date;
@@ -2943,19 +3222,18 @@ a { color: inherit; text-decoration: none; }
         d.city = data.city;
         d.description = data.description;
       });
-      state.adding = null;
       return;
     }
 
     /* Feature 1 — day info (all optional) */
     if (kind === "day-info") {
+      state.adding = null;   // clear before the render inside updateSelectedDay()
       updateSelectedDay(function (d) {
         d.info = {
           flight: data.flight || "", hotel: data.hotel || "", transport: data.transport || "",
           packing: data.packing || "", reminders: data.reminders || ""
         };
       });
-      state.adding = null;
       return;
     }
 
