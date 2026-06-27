@@ -8,11 +8,11 @@
 <meta name="theme-color" content="#0b1020" />
 <title>Japan 2026 — Trip Planner</title>
 <script>
-/* Apply the saved (or system) colour scheme before first paint — no flash. */
+/* Apply the saved colour scheme before first paint — no flash. Light by default;
+   only "dark" is dark (migrates any old "system" value to light). */
 (function () {
   try {
-    var t = localStorage.getItem("trip-theme-mode");
-    if (!t) t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+    var t = localStorage.getItem("trip-theme-mode") === "dark" ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", t);
   } catch (e) {}
 })();
@@ -268,8 +268,7 @@ html[data-theme="dark"] .cloud-acct { background: var(--bg-card); }
 .brand-menu-btn:hover { background: var(--border-soft); }
 .brand-menu-btn:active { transform: scale(.94); }
 /* Brand is a button (single trip-edit entry). */
-.brand { text-align: left; border-radius: 12px; transition: transform .1s ease; }
-.brand:active { transform: scale(.99); }
+.brand { text-align: left; border-radius: 12px; cursor: default; }
 .settings-btn {
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--bg-card); border: 1px solid var(--border);
@@ -584,6 +583,28 @@ html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
   position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 20;
   background: var(--bg);
   border-bottom: 1px solid var(--border-soft);
+}
+/* Prev/Next day stepper — above the day tabs, aligned right, always visible. */
+.day-nav-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 10px 16px 0;
+}
+.day-nav-pos { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -.01em; }
+.day-nav-pos .dn-of { color: var(--text-soft); font-weight: 600; }
+.day-nav-btns { display: flex; gap: 8px; }
+.day-nav-btn {
+  width: 50px; height: 44px; border-radius: 14px;
+  background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-sm);
+  transition: background .15s, transform .1s, box-shadow .15s, opacity .15s;
+}
+.day-nav-btn:hover { background: var(--border-soft); box-shadow: var(--shadow-md); }
+.day-nav-btn:active { transform: scale(.95); }
+.day-nav-btn:disabled { opacity: .35; pointer-events: none; box-shadow: none; }
+@media (max-width: 719px) {
+  .day-nav-btn { width: 58px; height: 48px; border-radius: 15px; }
+  .day-nav-pos { font-size: 15px; }
 }
 .pills {
   display: flex; gap: 12px;
@@ -1674,6 +1695,26 @@ html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
     return out;
   }
 
+  // Prev/Next day stepper — large touch targets, pinned top-right above the day tabs.
+  function renderDayNav() {
+    var idx = getSelectedDayIndex();
+    var atFirst = idx <= 0;
+    var atLast = idx >= state.days.length - 1;
+    return (
+      '<div class="day-nav-bar">' +
+        '<span class="day-nav-pos">Day ' + (idx + 1) + ' <span class="dn-of">of ' + state.days.length + '</span></span>' +
+        '<div class="day-nav-btns">' +
+          '<button class="day-nav-btn" data-action="prev-day"' + (atFirst ? " disabled" : "") + ' aria-label="Previous day">' +
+            '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>' +
+          '</button>' +
+          '<button class="day-nav-btn" data-action="next-day"' + (atLast ? " disabled" : "") + ' aria-label="Next day">' +
+            '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>' +
+          '</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function renderPills() {
     var parts = state.days.map(function (d, i) {
       var icon = d.icon || cityIcon[d.city] || "•";
@@ -1710,13 +1751,8 @@ html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
     if (monthLabel) labelParts.push(monthLabel);
     if (day.city) labelParts.push(esc((day.city || "").toUpperCase()) + (dayNum ? " " + dayNum : ""));
     var label = labelParts.join(" · ") || "DAY " + (index + 1);
-    var titleBlock = state.renamingTitle === "day"
-      ? ('<form class="title-edit-form" data-form="rename-day-title" autocomplete="off">' +
-            '<input class="input" name="title" required value="' + esc(day.title) + '" autofocus>' +
-            '<button type="submit" class="btn-primary">Save</button>' +
-            '<button type="button" class="btn-secondary" data-action="cancel-rename-title">Cancel</button>' +
-         '</form>')
-      : ('<h2>' + esc(day.title) + '<button class="title-edit" data-action="rename-day-title" title="Rename day" aria-label="Rename day">✏️</button></h2>');
+    // Day title is plain text — editing it lives in the "Edit details" dialog.
+    var titleBlock = '<h2>' + esc(day.title) + '</h2>';
     var descBlock = day.description
       ? '<p class="ov-sub" style="margin-top:8px;">' + esc(day.description) + '</p>'
       : '';
@@ -2534,15 +2570,13 @@ html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
     );
   }
 
-  /* Item 8 — Settings sheet (Appearance / Trip / About). */
+  /* Item 8 — Settings sheet (Appearance / Trip / About). Light + Dark only. */
   function getThemeMode() {
-    try { return localStorage.getItem("trip-theme-mode") || "system"; } catch (e) { return "system"; }
+    try { return localStorage.getItem("trip-theme-mode") === "dark" ? "dark" : "light"; } catch (e) { return "light"; }
   }
   function applyThemeMode(mode) {
-    try { localStorage.setItem("trip-theme-mode", mode); } catch (e) {}
-    var t = mode === "system"
-      ? ((window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light")
-      : mode;
+    var t = mode === "dark" ? "dark" : "light";
+    try { localStorage.setItem("trip-theme-mode", t); } catch (e) {}
     document.documentElement.setAttribute("data-theme", t);
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", t === "dark" ? "#0b1020" : "#ffffff");
@@ -2550,7 +2584,7 @@ html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
   function renderSettingsSheet() {
     if (state.adding !== "__settings__") return "";
     var mode = getThemeMode();
-    var seg = [["light", "☀️ Light"], ["dark", "🌙 Dark"], ["system", "⚙︎ Auto"]].map(function (m) {
+    var seg = [["light", "☀️ Light"], ["dark", "🌙 Dark"]].map(function (m) {
       return '<button class="seg-btn' + (mode === m[0] ? " is-on" : "") + '" data-action="set-theme-mode" data-mode="' + m[0] + '">' + m[1] + '</button>';
     }).join("");
     return (
@@ -2591,7 +2625,7 @@ html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
     var day = getSelectedDay();
     var index = getSelectedDayIndex();
     return (
-      '<div class="pills-wrap">' + renderPills() + '</div>' +
+      '<div class="pills-wrap">' + renderDayNav() + renderPills() + '</div>' +
       '<main class="day-view">' +
         renderHero(day, index) +
         renderDayContent(day) +
@@ -2624,14 +2658,14 @@ html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
     var html =
       '<div class="app has-toggle' + (__readOnly ? ' read-only' : '') + '">' +
         '<header class="topbar">' +
-          // Top-left brand is the single entry point for editing trip details.
-          '<button class="brand" data-action="open-edit-trip" title="Edit trip details" aria-label="Edit trip details">' +
+          // Top-left brand is display-only; trip editing is via Settings.
+          '<div class="brand">' +
             '<div class="brand-mark" aria-hidden="true" style="background:' + theme.g + '">' + theme.emoji + '</div>' +
             '<div class="brand-text">' +
               '<div class="brand-title">' + esc(t.title || "Trip") + '</div>' +
               '<div class="brand-sub">' + esc(t.subtitle || "") + '</div>' +
             '</div>' +
-          '</button>' +
+          '</div>' +
           '<div class="topbar-right">' +
             '<button class="settings-btn" data-action="open-settings" title="Settings" aria-label="Settings">' +
               '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' +
@@ -2692,6 +2726,20 @@ html[data-theme="dark"] .set-row.danger { color: #fca5a5; }
       state.adding = null; state.editing = null; state.renamingSection = null;
       state.activeSectionTab = 0;   // reset section tab when changing day
       state.dayInfoExpanded = false; // collapse day info on day change
+      persist();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    /* Prev / Next day stepper */
+    if (action === "prev-day" || action === "next-day") {
+      var ci = getSelectedDayIndex();
+      var ni = action === "prev-day" ? ci - 1 : ci + 1;
+      if (ni < 0 || ni >= state.days.length) return;
+      state.selectedDayId = state.days[ni].id;
+      state.adding = null; state.editing = null; state.renamingSection = null;
+      state.activeSectionTab = 0; state.dayInfoExpanded = false;
       persist();
       render();
       window.scrollTo({ top: 0, behavior: "smooth" });
